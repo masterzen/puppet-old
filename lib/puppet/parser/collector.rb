@@ -138,7 +138,9 @@ class Puppet::Parser::Collector
             method = :virtual?
         end
         scope.compiler.resources.find_all do |resource|
-            resource.type == @type and resource.send(method) and match?(resource)
+            ( resource.type == @type or
+              resource.scope.scope_path.any? { |s| s.lookuptype(@type) }
+            ) and resource.send(method) and match?(resource)
         end
     end
 
