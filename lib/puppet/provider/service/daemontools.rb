@@ -94,7 +94,7 @@ Puppet::Type.type(:service).provide :daemontools, :parent => :base do
     # note that this path can be overriden in the resource
     # definition
     def daemon
-	File.join(resource[:path], resource[:name])
+        File.join(resource[:path], resource[:name])
     end
     
     def restartcmd
