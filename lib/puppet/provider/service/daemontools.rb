@@ -57,12 +57,19 @@ Puppet::Type.type(:service).provide :daemontools, :parent => :base do
             next
         end
 
+        # reject entries that aren't either a directory
+        # or don't contain a run file
         Dir.entries(path).reject { |e|
             fullpath = File.join(path, e)
-            e =~ /^\./ or ! FileTest.directory?(fullpath)
+            e =~ /^\./ or ! FileTest.directory?(fullpath) or ! FileTest.exist?(File.join(fullpath,"run"))
         }.collect do |name|
             new(:name => name, :path => path)
         end
+    end
+
+    # returns the daemon dir on this node
+    def self.daemondir
+        self.class.defpath
     end
 
     # find the service dir on this node
@@ -79,11 +86,6 @@ Puppet::Type.type(:service).provide :daemontools, :parent => :base do
       @servicedir
     end
 
-    # returns the daemon dir on this node
-    def self.daemondir
-        self.class.defpath
-    end
-    
     # returns the full path of this service when enabled
     # (ie in the service directory)
     def service
