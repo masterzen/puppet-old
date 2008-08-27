@@ -56,11 +56,6 @@ Puppet::Type.type(:service).provide :runit, :parent => :daemontools do
       @servicedir
     end
 
-    # returns the daemon dir on this node
-    def self.daemondir
-        self.class.defpath
-    end
-
     def restartcmd
         [ command(:sv), "restart", self.service]
     end
@@ -68,20 +63,28 @@ Puppet::Type.type(:service).provide :runit, :parent => :daemontools do
     def status
         begin
             output = sv "status", self.service
-            return :running if output =~ /^run /
+            return :running if output =~ /^run: /
         rescue Puppet::ExecutionFailure => detail
-            raise Puppet::Error.new( "Could not get status for service %s: %s" % [ resource.ref, detail] )
+            unless detail =~ /runsv not running$/
+                raise Puppet::Error.new( "Could not get status for service %s: %s" % [ resource.ref, detail] )
+            end
         end
         return :stopped
+    end
+
+    # relay to the stopcmd
+    def stop
+        ucommand( :stop )
     end
 
     def stopcmd
         [ command(:sv), "stop", self.service]
     end
 
-    # disable by stopping the service
-    # and removing the symlink so that svscan
+    # disable by removing the symlink so that runit
     # doesn't restart our service behind our back
+    # note that runit doesn't need to perform a stop
+    # before a disable
     def disable
         # unlink the daemon symlink to disable it
         File.unlink(self.service) if FileTest.symlink?(self.service)
