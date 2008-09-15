@@ -409,7 +409,11 @@ else:             # nothing
 
 # Currently we only support a single value, but eventually one assumes
 # we'll support operators and such.
-iftest:         rvalue
+iftest:         rvalue | ifntest
+
+ifntest: NOT rvalue {
+    result = ast AST::Not, :value => val[1]
+}
 
 casestatement:  CASE rvalue LBRACE caseopts RBRACE {
     options = val[3]
