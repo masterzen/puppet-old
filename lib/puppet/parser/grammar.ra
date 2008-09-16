@@ -11,6 +11,14 @@ token IF ELSE IMPORT DEFINE ELSIF VARIABLE CLASS INHERITS NODE BOOLEAN
 token NAME SEMIC CASE DEFAULT AT LCOLLECT RCOLLECT CLASSNAME CLASSREF
 token NOT OR AND UNDEF PARROW
 
+prechigh
+    left  NOTEQUAL ISEQUAL
+    left  GREATEREQUAL GREATERTHAN LESSTHAN LESSEQUAL
+    left  AND 
+    left  OR
+    right NOT
+preclow
+
 rule
 program:    statements {
     if val[0]
@@ -407,9 +415,31 @@ else:             # nothing
     result = ast AST::Else, :statements => val[2]
 }
 
-# Currently we only support a single value, but eventually one assumes
-# we'll support operators and such.
-iftest:         rvalue
+
+iftest:         expression
+
+expression: rvalue |
+            booleanexpr |
+            comparison |
+            notexpr |
+            LPAREN expression RPAREN
+
+booleanexpr: expression booleanop expression {
+    result = ast AST::BooleanOperator, :operator => val[1], :lval => val[0], :rval => val[2]
+}
+
+booleanop: OR | AND
+
+notexpr: NOT expression {
+    result = ast AST::Not, :val => val[1]
+}
+
+comparison: variable comparisonop simplervalue {
+    result = ast AST::ComparisonOperator, :variable => val[0], :operator => val[1], :value => val[2]
+}
+
+comparisonop: ISEQUAL | NOTEQUAL | GREATEREQUAL | GREATERTHAN | LESSTHAN | LESSEQUAL
+
 
 casestatement:  CASE rvalue LBRACE caseopts RBRACE {
     options = val[3]
