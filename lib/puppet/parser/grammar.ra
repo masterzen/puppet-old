@@ -11,6 +11,14 @@ token IF ELSE IMPORT DEFINE ELSIF VARIABLE CLASS INHERITS NODE BOOLEAN
 token NAME SEMIC CASE DEFAULT AT LCOLLECT RCOLLECT CLASSNAME CLASSREF
 token NOT OR AND UNDEF PARROW
 
+prechigh
+    left  NOTEQUAL ISEQUAL
+    left  GREATEREQUAL GREATERTHAN LESSTHAN LESSEQUAL
+    left  AND 
+    left  OR
+    right NOT
+preclow
+
 rule
 program:    statements {
     if val[0]
@@ -395,7 +403,7 @@ resourceref: NAME LBRACK rvalue RBRACK {
     result = ast AST::ResourceReference, :type => val[0], :title => val[2]
 }
 
-ifstatement:      IF iftest LBRACE statements RBRACE else {
+ifstatement:      IF expression LBRACE statements RBRACE else {
     args = {
         :test => val[1],
         :statements => val[3]
@@ -413,9 +421,40 @@ else:             # nothing
     result = ast AST::Else, :statements => val[2]
 }
 
-# Currently we only support a single value, but eventually one assumes
-# we'll support operators and such.
-iftest:         rvalue
+
+#iftest:         expression
+
+expression: rvalue |
+            booleanexpr |
+            comparison |
+            notexpr |
+            LPAREN expression RPAREN {
+    result = val[1]
+}
+
+booleanexpr: expression booleanop rexpression {
+    result = ast AST::BooleanOperator, :operator => val[1], :lval => val[0], :rval => val[2]
+}
+
+rexpression: rvalue |
+            comparison |
+            notexpr |
+            LPAREN expression RPAREN {
+    result = val[1]
+}
+
+booleanop: OR | AND
+
+notexpr: NOT expression {
+    result = ast AST::Not, :value => val[1]
+}
+
+comparison: rvalue comparisonop simplervalue {
+    result = ast AST::ComparisonOperator, :operator => val[1], :lval => val[0], :rval => val[2]
+}
+
+comparisonop: ISEQUAL | NOTEQUAL | GREATEREQUAL | GREATERTHAN | LESSTHAN | LESSEQUAL
+
 
 casestatement:  CASE rvalue LBRACE caseopts RBRACE {
     options = val[3]
