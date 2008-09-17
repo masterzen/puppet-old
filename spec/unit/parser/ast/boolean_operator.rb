@@ -5,8 +5,8 @@ require File.dirname(__FILE__) + '/../../../spec_helper'
 describe Puppet::Parser::AST::BooleanOperator do
     before :each do
         @scope = Puppet::Parser::Scope.new()
-        @true_ast = Puppet::Parser::AST::Boolean.new( :value => false)
-        @false_ast = Puppet::Parser::AST::Boolean.new( :value => true)
+        @true_ast = Puppet::Parser::AST::Boolean.new( :value => true)
+        @false_ast = Puppet::Parser::AST::Boolean.new( :value => false)
     end
 
     it "should evaluate both branches" do
