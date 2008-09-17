@@ -397,7 +397,7 @@ resourceref: NAME LBRACK rvalue RBRACK {
     result = ast AST::ResourceReference, :type => val[0], :title => val[2]
 }
 
-ifstatement:      IF iftest LBRACE statements RBRACE else {
+ifstatement:      IF expression LBRACE statements RBRACE else {
     args = {
         :test => val[1],
         :statements => val[3]
@@ -416,26 +416,35 @@ else:             # nothing
 }
 
 
-iftest:         expression
+#iftest:         expression
 
 expression: rvalue |
             booleanexpr |
             comparison |
             notexpr |
-            LPAREN expression RPAREN
+            LPAREN expression RPAREN {
+    result = val[1]
+}
 
-booleanexpr: expression booleanop expression {
+booleanexpr: expression booleanop rexpression {
     result = ast AST::BooleanOperator, :operator => val[1], :lval => val[0], :rval => val[2]
+}
+
+rexpression: rvalue |
+            comparison |
+            notexpr |
+            LPAREN expression RPAREN {
+    result = val[1]
 }
 
 booleanop: OR | AND
 
 notexpr: NOT expression {
-    result = ast AST::Not, :val => val[1]
+    result = ast AST::Not, :value => val[1]
 }
 
-comparison: variable comparisonop simplervalue {
-    result = ast AST::ComparisonOperator, :variable => val[0], :operator => val[1], :value => val[2]
+comparison: rvalue comparisonop simplervalue {
+    result = ast AST::ComparisonOperator, :operator => val[1], :lval => val[0], :rval => val[2]
 }
 
 comparisonop: ISEQUAL | NOTEQUAL | GREATEREQUAL | GREATERTHAN | LESSTHAN | LESSEQUAL
