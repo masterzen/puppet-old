@@ -48,7 +48,6 @@ class Puppet::Parser::Parser
     # Create an AST object, and automatically add the file and line information if
     # available.
     def ast(klass, hash = {})
-        puts "AST: %s %s" % [klass, hash.to_s]
         hash[:line] = @lexer.line unless hash.include?(:line)
 
         unless hash.include?(:file)
@@ -56,10 +55,8 @@ class Puppet::Parser::Parser
                 hash[:file] = file
             end
         end
-        puts "been there %s" % klass
+
         k = klass.new(hash)
-        puts "been there3 %s" % klass
-        puts "K: %s" % k.inspect
         return k
     end
 
@@ -399,7 +396,6 @@ class Puppet::Parser::Parser
             self.string = string
         end
         begin
-            @yydebug=true
             main = yyparse(@lexer,:scan)
         rescue Racc::ParseError => except
             error = Puppet::ParseError.new(except)
