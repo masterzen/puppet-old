@@ -1,3 +1,5 @@
+require 'puppet'
+require 'puppet/parser/ast/branch'
 
 class Puppet::Parser::AST
     class BooleanOperator < AST::Branch

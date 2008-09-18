@@ -36,19 +36,19 @@ describe Puppet::Parser do
      # 
     # end
     
-    describe Puppet::Parser, "when parsing if complex expressions" do
-         it "should create an ast tree" do
-             
-             AST::ComparisonOperator.expects(:new).with { 
-                 |h| h[:rval].is_a?(AST::Name) and h[:lval].is_a?(AST::Name) and h[:operator]==">"
-             }
-             AST::ComparisonOperator.expects(:new).with { 
-                 |h| h[:rval].is_a?(AST::Name) and h[:lval].is_a?(AST::Name) and h[:operator]=="=="
-             }
-             AST::BooleanOperator.expects(:new).with {
-                 |h| h[:rval].is_a?(AST::Boolean) and h[:lval].is_a?(AST::Boolean) and h[:operator]=="and"                
-             }
-             @parser.parse("if (1 > 2) and (1 == 2) { $var = 1 }")
-         end
-     end
+    # describe Puppet::Parser, "when parsing if complex expressions" do
+    #      it "should create an ast tree" do
+    #          
+    #          AST::ComparisonOperator.expects(:new).with { 
+    #              |h| h[:rval].is_a?(AST::Name) and h[:lval].is_a?(AST::Name) and h[:operator]==">"
+    #          }
+    #          AST::ComparisonOperator.expects(:new).with { 
+    #              |h| h[:rval].is_a?(AST::Name) and h[:lval].is_a?(AST::Name) and h[:operator]=="=="
+    #          }
+    #          AST::BooleanOperator.expects(:new).with {
+    #              |h| h[:rval].is_a?(AST::Boolean) and h[:lval].is_a?(AST::Boolean) and h[:operator]=="and"                
+    #          }
+    #          @parser.parse("if (1 > 2) and (1 == 2) { $var = 1 }")
+    #      end
+    #  end
  end
