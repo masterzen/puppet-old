@@ -11,7 +11,7 @@ describe Puppet::Parser do
         @true_ast = AST::Boolean.new :value => true
     end
     
-    describe Puppet::Parser, "when parsing if" do
+    describe Puppet::Parser, "when parsing 'if'" do
         it "not, it should create the correct ast objects" do
             AST::Not.expects(:new).with { |h| h[:value].is_a?(AST::Boolean) }
             @parser.parse("if ! true { $var = 1 }")
@@ -37,8 +37,7 @@ describe Puppet::Parser do
     end
     
     describe Puppet::Parser, "when parsing if complex expressions" do
-         it "should create an ast tree" do
-             comparisonOp = stub 'Puppet::Parser::AST::ComparisonOperator'
+         it "should create a correct ast tree" do
              AST::ComparisonOperator.expects(:new).with { 
                  |h| h[:rval].is_a?(AST::Name) and h[:lval].is_a?(AST::Name) and h[:operator]==">"
              }.returns("whatever")
@@ -50,5 +49,10 @@ describe Puppet::Parser do
              }
              @parser.parse("if (1 > 2) and (1 == 2) { $var = 1 }")
          end
+
+         it "should raise an error on incorrect expression" do
+             lambda { @parser.parse("if (1 > 2 > ) or (1 == 2) { $var = 1 }") }.should raise_error
+        end
+
      end
  end
