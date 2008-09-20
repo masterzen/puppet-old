@@ -136,7 +136,13 @@ describe Puppet::Parser::Lexer::TOKENS do
         :BACKSLASH => '\\',
         :FARROW => '=>',
         :PARROW => '+>',
-        :APPENDS => '+='
+        :APPENDS => '+=',
+        :PLUS => '+',
+        :MINUS => '-',
+        :DIV => '/',
+        :TIMES => '*',
+        :LSHIFT => '<<',
+        :RSHIFT => '>>',
     }.each do |name, string|
         it "should have a token named #{name.to_s}" do
             Puppet::Parser::Lexer::TOKENS[name].should_not be_nil

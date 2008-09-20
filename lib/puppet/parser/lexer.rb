@@ -126,6 +126,12 @@ class Puppet::Parser::Lexer
         '\\' => :BACKSLASH,
         '=>' => :FARROW,
         '+>' => :PARROW,
+        '+' => :PLUS,
+        '-' => :MINUS,
+        '/' => :DIV,
+        '*' => :TIMES,
+        '<<' => :LSHIFT,
+        '>>' => :RSHIFT,
         %r{([a-z][-\w]*::)+[a-z][-\w]*} => :CLASSNAME,
         %r{((::){0,1}[A-Z][-\w]*)+} => :CLASSREF
     )

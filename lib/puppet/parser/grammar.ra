@@ -9,14 +9,18 @@ token FALSE EQUALS APPENDS LESSEQUAL NOTEQUAL DOT COLON LLCOLLECT RRCOLLECT
 token QMARK LPAREN RPAREN ISEQUAL GREATEREQUAL GREATERTHAN LESSTHAN
 token IF ELSE IMPORT DEFINE ELSIF VARIABLE CLASS INHERITS NODE BOOLEAN
 token NAME SEMIC CASE DEFAULT AT LCOLLECT RCOLLECT CLASSNAME CLASSREF
-token NOT OR AND UNDEF PARROW
+token NOT OR AND UNDEF PARROW PLUS MINUS TIMES DIV LSHIFT RSHIFT UMINUS
 
 prechigh
+    right NOT
+    nonassoc UMINUS
+    left  TIMES DIV
+    left  PLUS MINUS
+    left  LSHIFT RSHIFT
     left  NOTEQUAL ISEQUAL
     left  GREATEREQUAL GREATERTHAN LESSTHAN LESSEQUAL
-    left  AND 
+    left  AND
     left  OR
-    right NOT
 preclow
 
 rule
@@ -291,7 +295,7 @@ resourcename:   quotedtext
             | variable
             | array
 
-assignment:     VARIABLE EQUALS rvalue {
+assignment:     VARIABLE EQUALS expression {
     if val[0] =~ /::/
         raise Puppet::ParseError, "Cannot assign to variables in other namespaces"
     end
@@ -300,7 +304,7 @@ assignment:     VARIABLE EQUALS rvalue {
     result = ast AST::VarDef, :name => variable, :value => val[2]
 }
 
-append:     VARIABLE APPENDS rvalue {
+append:     VARIABLE APPENDS expression {
     variable = ast AST::Name, :value => val[0]
     result = ast AST::VarDef, :name => variable, :value => val[2], :append => true
 }
@@ -421,39 +425,41 @@ else:             # nothing
     result = ast AST::Else, :statements => val[2]
 }
 
-
-#iftest:         expression
-
-expression: rvalue |
-            booleanexpr |
-            comparison |
-            notexpr |
-            LPAREN expression RPAREN {
-    result = val[1]
+term:   rvalue
+        | LPAREN expression RPAREN {
+result = val[1]
 }
 
-booleanexpr: expression booleanop rexpression {
+expression:   term
+            | booleanexpr
+            | comparison
+            | notexpr
+            | arithexpr
+            | MINUS expression =UMINUS {
+    result = ast AST::Minus, :value => val[1]
+}
+
+arithexpr: term arithop expression {
+    result = ast AST::ArithmeticOperator, :operator => val[1], :lval => val[0], :rval => val[2]
+} 
+
+arithop: PLUS | MINUS | TIMES | DIV | LSHIFT | RSHIFT
+
+booleanexpr: term booleanop expression {
     result = ast AST::BooleanOperator, :operator => val[1], :lval => val[0], :rval => val[2]
-}
-
-rexpression: rvalue |
-            comparison |
-            notexpr |
-            LPAREN expression RPAREN {
-    result = val[1]
 }
 
 booleanop: OR | AND
 
-notexpr: NOT expression {
-    result = ast AST::Not, :value => val[1]
-}
-
-comparison: rvalue comparisonop simplervalue {
+comparison: term comparisonop expression {
     result = ast AST::ComparisonOperator, :operator => val[1], :lval => val[0], :rval => val[2]
 }
 
 comparisonop: ISEQUAL | NOTEQUAL | GREATEREQUAL | GREATERTHAN | LESSTHAN | LESSEQUAL
+
+notexpr: NOT expression {
+    result = ast AST::Not, :value => val[1]
+}
 
 
 casestatement:  CASE rvalue LBRACE caseopts RBRACE {
