@@ -54,15 +54,15 @@ describe Puppet::Parser::AST::ArithmeticOperator do
     end
 
     it "should work even with numbers embedded in strings" do
-        two = stub 'two', :safevealuate => "2"
-        one = stub 'one', :safevealuate => "1"
+        two = stub 'two', :safeevaluate => "2"
+        one = stub 'one', :safeevaluate => "1"
         operator = Puppet::Parser::AST::ArithmeticOperator.new :lval => two, :operator => "+", :rval => one
         operator.evaluate(@scope).should == 3
     end
 
     it "should work even with floats" do
-        two = stub 'two', :safevealuate => 2.53
-        one = stub 'one', :safevealuate => 1.80
+        two = stub 'two', :safeevaluate => 2.53
+        one = stub 'one', :safeevaluate => 1.80
         operator = Puppet::Parser::AST::ArithmeticOperator.new :lval => two, :operator => "+", :rval => one
         operator.evaluate(@scope).should == 4.33
     end
