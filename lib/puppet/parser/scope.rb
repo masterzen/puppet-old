@@ -50,9 +50,9 @@ class Puppet::Parser::Scope
         end
         
         if value.is_a?(String)
-            if value =~ /^\d+\.\d+$/
+            if value =~ /^-?\d+(:?\.\d+|(:?\.\d+)?e\d+)$/
                 return value.to_f
-            elsif value =~ /^\d+/
+            elsif value =~ /^-?\d+/
                 return value.to_i
             else
                 return nil

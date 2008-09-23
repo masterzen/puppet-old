@@ -35,9 +35,42 @@ describe Puppet::Parser::Scope do
 
     end
 
-    describe Puppet::Parser::Scope, "when number?" do
+    describe Puppet::Parser::Scope, "when calling number?" do
 
         it "should return nil is called with anything not a number" do
+            Puppet::Parser::Scope.number?([2]).should == nil
+        end
+
+        it "should return a Fixnum for a Fixnum" do
+            Puppet::Parser::Scope.number?(2).should be_an_instance_of(Fixnum)
+        end
+
+        it "should return a Float for a Float" do
+            Puppet::Parser::Scope.number?(2.34).should be_an_instance_of(Float)
+        end
+
+        it "should return 234 for '234'" do
+            Puppet::Parser::Scope.number?("234").should == 234
+        end
+
+        it "should return nil for 'not a number'" do
+            Puppet::Parser::Scope.number?("not a number").should == nil
+        end
+
+        it "should return 23.4 for '23.4'" do
+            Puppet::Parser::Scope.number?("23.4").should == 23.4
+        end
+
+        it "should return 23.4e13 for '23.4e13'" do
+            Puppet::Parser::Scope.number?("23.4e13").should == 23.4e13
+        end
+
+        it "should return understand negative numbers" do
+            Puppet::Parser::Scope.number?("-234").should == -234
+        end
+
+        it "should return 23e13 for '23e13'" do
+            Puppet::Parser::Scope.number?("23e13").should == 23e13
         end
 
     end
