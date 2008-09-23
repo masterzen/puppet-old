@@ -26,15 +26,8 @@ class Puppet::Parser::AST
                 raise ArgumentError, "right operand of %s is not a number" % @operator
             end
 
-            # return result
-            case @operator
-            when "+";  lval + rval
-            when "-";  lval - rval
-            when "*";  lval * rval
-            when "/";  lval / rval
-            when "<<"; lval << rval
-            when ">>"; lval >> rval
-            end
+            # compute result
+            lval.send(@operator, rval)
         end
 
         def initialize(hash)
