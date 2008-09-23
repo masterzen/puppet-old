@@ -19,14 +19,7 @@ class Puppet::Parser::AST
             rval = @rval.safeevaluate(scope)
 
             # return result
-            case @operator
-            when "==": lval == rval
-            when "!=": lval != rval
-            when "<":  lval < rval
-            when ">":  lval > rval
-            when "<=": lval <= rval
-            when ">=": lval >= rval
-            end
+            lval.send(@operator,rval)
         end
 
         def initialize(hash)
