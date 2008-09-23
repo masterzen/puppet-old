@@ -9,11 +9,10 @@ describe Puppet::Parser::AST::BooleanOperator do
         @false_ast = Puppet::Parser::AST::Boolean.new( :value => false)
     end
 
-    it "should evaluate both branches" do
+    it "should evaluate left value inconditionally" do
         lval = stub "lval"
-        lval.expects(:safeevaluate).with(@scope)
-        rval = stub "rval"
-        rval.expects(:safeevaluate).with(@scope)
+        lval.expects(:safeevaluate).with(@scope).returns("true")
+        rval = stub "rval", :safeevaluate => false
         
         operator = Puppet::Parser::AST::BooleanOperator.new :rval => rval, :operator => "or", :lval => lval
         operator.evaluate(@scope)
