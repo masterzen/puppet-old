@@ -14,14 +14,26 @@ class Puppet::Parser::AST
         # Returns a boolean which is the result of the boolean operation
         # of lval and rval operands
         def evaluate(scope)
-            # evaluate the operands, should return a boolean value
+            # evaluate the first operand, should return a boolean value
             lval = @lval.safeevaluate(scope)
-            rval = @rval.safeevaluate(scope)
             
             # return result
+            # lazy evaluate right operand
             case @operator
-            when "and": Puppet::Parser::Scope.true?(rval) and Puppet::Parser::Scope.true?(lval)
-            when "or": Puppet::Parser::Scope.true?(rval) or Puppet::Parser::Scope.true?(lval)
+            when "and";
+                if Puppet::Parser::Scope.true?(lval)
+                    rval = @rval.safeevaluate(scope)
+                    Puppet::Parser::Scope.true?(lval)
+                else # false and false == false
+                    false
+                end
+            when "or"; 
+                if Puppet::Parser::Scope.true?(lval) 
+                    true
+                else
+                    rval = @rval.safeevaluate(scope)
+                    Puppet::Parser::Scope.true?(lval)
+                end
             end
         end
 
