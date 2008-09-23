@@ -53,6 +53,21 @@ describe Puppet::Parser::AST::ArithmeticOperator do
         operator.evaluate(@scope).should == 1
     end
 
+    it "should work even with numbers embedded in strings" do
+        two = stub 'two', :safevealuate => "2"
+        one = stub 'one', :safevealuate => "1"
+        operator = Puppet::Parser::AST::ArithmeticOperator.new :lval => two, :operator => "+", :rval => one
+        operator.evaluate(@scope).should == 3
+    end
+
+    it "should work even with floats" do
+        two = stub 'two', :safevealuate => 2.53
+        one = stub 'one', :safevealuate => 1.80
+        operator = Puppet::Parser::AST::ArithmeticOperator.new :lval => two, :operator => "+", :rval => one
+        operator.evaluate(@scope).should == 4.33
+    end
+
+
     it "should work for variables too" do
         @scope.expects(:lookupvar).with("one").returns(1)
         @scope.expects(:lookupvar).with("two").returns(2)

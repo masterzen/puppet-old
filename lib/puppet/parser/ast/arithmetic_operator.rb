@@ -16,16 +16,14 @@ class Puppet::Parser::AST
         def evaluate(scope)
             # evaluate the operands, should return a boolean value
             lval = @lval.safeevaluate(scope)
-            lval = lval.to_i
-            rval = @rval.safeevaluate(scope)
-            rval = rval.to_i
-
-            unless lval.is_a?(Fixnum)
-                raise ArgumentError, "%s is not an integer" % lval
+            lval = Puppet::Parser::Scope.number?(lval)
+            if lval == nil
+                raise ArgumentError, "left operand of %s is not a number" % @operator
             end
-
-            unless rval.is_a?(Fixnum)
-                raise ArgumentError, "%s is not an integer" % rval
+            rval = @rval.safeevaluate(scope)
+            rval = Puppet::Parser::Scope.number?(rval)
+            if rval == nil
+                raise ArgumentError, "right operand of %s is not a number" % @operator
             end
 
             # return result

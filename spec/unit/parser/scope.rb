@@ -34,4 +34,12 @@ describe Puppet::Parser::Scope do
         end
 
     end
+
+    describe Puppet::Parser::Scope, "when number?" do
+
+        it "should return nil is called with anything not a number" do
+        end
+
+    end
+
 end
