@@ -9,7 +9,7 @@ describe Puppet::Parser::AST::BooleanOperator do
         @false_ast = Puppet::Parser::AST::Boolean.new( :value => false)
     end
 
-    it "should evaluate left value inconditionally" do
+    it "should evaluate left operand inconditionally" do
         lval = stub "lval"
         lval.expects(:safeevaluate).with(@scope).returns("true")
         rval = stub "rval", :safeevaluate => false
@@ -18,7 +18,23 @@ describe Puppet::Parser::AST::BooleanOperator do
         operator.evaluate(@scope)
     end
 
-    it "should return true for true OR false" do
+    it "should evaluate right 'and' operand only if left operand is true" do
+        lval = stub "lval", :safeevaluate => true
+        rval = stub "rval", :safeevaluate => false
+        rval.expects(:safeevaluate).with(@scope).returns(false)
+        operator = Puppet::Parser::AST::BooleanOperator.new :rval => rval, :operator => "and", :lval => lval
+        operator.evaluate(@scope)
+    end
+
+    it "should evaluate right 'or' operand only if left operand is false" do
+        lval = stub "lval", :safeevaluate => false
+        rval = stub "rval", :safeevaluate => false
+        rval.expects(:safeevaluate).with(@scope).returns(false)
+        operator = Puppet::Parser::AST::BooleanOperator.new :rval => rval, :operator => "or", :lval => lval
+        operator.evaluate(@scope)
+    end
+
+    it "should return true for false OR true" do
         operator = Puppet::Parser::AST::BooleanOperator.new :rval => @true_ast, :operator => "or", :lval => @false_ast
         operator.evaluate(@scope).should == true
     end
@@ -26,6 +42,11 @@ describe Puppet::Parser::AST::BooleanOperator do
     it "should return false for true AND false" do
         operator = Puppet::Parser::AST::BooleanOperator.new(:rval => @true_ast, :operator => "and", :lval => @false_ast )
         operator.evaluate(@scope).should == false
+    end
+
+    it "should return true for true AND true" do
+        operator = Puppet::Parser::AST::BooleanOperator.new(:rval => @true_ast, :operator => "and", :lval => @true_ast )
+        operator.evaluate(@scope).should == true
     end
 
 end
