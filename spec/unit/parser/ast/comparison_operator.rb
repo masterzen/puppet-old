@@ -23,34 +23,13 @@ describe Puppet::Parser::AST::ComparisonOperator do
         lambda { operator = Puppet::Parser::AST::ComparisonOperator.new :lval => @one, :operator => "or", :rval => @two }.should raise_error
     end
 
-    it "should return true for 1 < 2" do
-        operator = Puppet::Parser::AST::ComparisonOperator.new :lval => @one, :operator => "<", :rval => @two
-        operator.evaluate(@scope).should == true
-    end
-
-    it "should return false for 1 > 2" do
-        operator = Puppet::Parser::AST::ComparisonOperator.new :lval => @one, :operator => ">", :rval => @two
-        operator.evaluate(@scope).should == false
-    end
-
-    it "should return true for 1 <= 2" do
-        operator = Puppet::Parser::AST::ComparisonOperator.new :lval => @one, :operator => "<=", :rval => @two
-        operator.evaluate(@scope).should == true
-    end
-
-    it "should return true for 2 <= 2" do
-        operator = Puppet::Parser::AST::ComparisonOperator.new :lval => @two, :operator => "<=", :rval => @two
-        operator.evaluate(@scope).should == true
-    end
-
-    it "should return true for 2 == 2" do
-        operator = Puppet::Parser::AST::ComparisonOperator.new :lval => @two, :operator => "==", :rval => @two
-        operator.evaluate(@scope).should == true
-    end
-
-    it "should return false for 2 != 2" do
-        operator = Puppet::Parser::AST::ComparisonOperator.new :lval => @two, :operator => "!=", :rval => @two
-        operator.evaluate(@scope).should == false
+    %w{< > <= >= ==}.each do |oper|
+       it "should return the result of using '#{oper}' to compare the left and right sides" do
+           one = stub 'one', :safeevaluate => "1"
+           two = stub 'two', :safeevaluate => "2"
+           operator = Puppet::Parser::AST::ComparisonOperator.new :lval => one, :operator => oper, :rval => two
+           operator.evaluate(@scope).should == 1.send(oper,2)
+       end
     end
 
     it "should work for variables too" do
