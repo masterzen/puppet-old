@@ -23,7 +23,7 @@ class Puppet::Parser::AST
             when "and";
                 if Puppet::Parser::Scope.true?(lval)
                     rval = @rval.safeevaluate(scope)
-                    Puppet::Parser::Scope.true?(lval)
+                    Puppet::Parser::Scope.true?(rval)
                 else # false and false == false
                     false
                 end
@@ -32,7 +32,7 @@ class Puppet::Parser::AST
                     true
                 else
                     rval = @rval.safeevaluate(scope)
-                    Puppet::Parser::Scope.true?(lval)
+                    Puppet::Parser::Scope.true?(rval)
                 end
             end
         end
