@@ -138,6 +138,10 @@ class Puppet::Parser::Lexer
 
     TOKENS.add_tokens "Whatever" => :DQTEXT, "Nomatter" => :SQTEXT, "alsonomatter" => :BOOLEAN
 
+    TOKENS.add_token :NUMBER, %r{(?:0[xX][0-9A-Fa-f]+|0?\d+(?:\.\d+)?(?:[eE]-?\d+)?)} do |lexer, value|
+        [TOKENS[:NAME], value]
+    end
+
     TOKENS.add_token :NAME, %r{[a-z0-9][-\w]*} do |lexer, value|
         string_token = self
         # we're looking for keywords here
@@ -149,10 +153,6 @@ class Puppet::Parser::Lexer
             end
         end
         [string_token, value]
-    end
-
-    TOKENS.add_token :NUMBER, %r{[0-9]+} do |lexer, value|
-        [TOKENS[:NAME], value]
     end
 
     TOKENS.add_token :COMMENT, %r{#.*}, :skip => true
