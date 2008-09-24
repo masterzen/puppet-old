@@ -69,9 +69,18 @@ describe Puppet::Parser::Scope do
             Puppet::Parser::Scope.number?("-234").should == -234
         end
 
-        it "should return 23e13 for '23e13'" do
+        it "should know how to convert exponential float numbers ala '23e13'" do
             Puppet::Parser::Scope.number?("23e13").should == 23e13
         end
+
+        it "should understand hexadecimal numbers" do
+            Puppet::Parser::Scope.number?("0x234").should == 0x234
+        end
+
+        it "should understand octal numbers" do
+            Puppet::Parser::Scope.number?("0755").should == 0755
+        end
+
 
     end
 

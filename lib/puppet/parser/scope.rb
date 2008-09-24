@@ -52,6 +52,10 @@ class Puppet::Parser::Scope
         if value.is_a?(String)
             if value =~ /^-?\d+(:?\.\d+|(:?\.\d+)?e\d+)$/
                 return value.to_f
+            elsif value =~ /^0x\d+/i
+                return value.to_i(16)
+            elsif value =~ /^0\d+/i
+                return value.to_i(8)
             elsif value =~ /^-?\d+/
                 return value.to_i
             else
