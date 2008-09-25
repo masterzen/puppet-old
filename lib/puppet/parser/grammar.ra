@@ -15,7 +15,7 @@ prechigh
     right NOT
     nonassoc UMINUS
     left  TIMES DIV
-    left  PLUS MINUS
+    left  MINUS PLUS
     left  LSHIFT RSHIFT
     left  NOTEQUAL ISEQUAL
     left  GREATEREQUAL GREATERTHAN LESSTHAN LESSEQUAL
@@ -425,42 +425,70 @@ else:             # nothing
     result = ast AST::Else, :statements => val[2]
 }
 
-term:   rvalue
-        | LPAREN expression RPAREN {
-result = val[1]
-}
+# Unlike yacc/bison, it seems racc
+# gives tons of shift/reduce warnings
+# with the following syntax:
+# 
+# expression: ...
+#            | expression arithop expressio { ... }
+#            
+# arithop: PLUS | MINUS | DIVIDE | TIMES ...
+#
+# So I had to develop the expression by adding one rule
+# per operator :-(
 
-expression:   term
-            | booleanexpr
-            | comparison
-            | notexpr
-            | arithexpr
+expression:   rvalue
+            | expression PLUS expression {
+    result = ast AST::ArithmeticOperator, :operator => val[1], :lval => val[0], :rval => val[2]
+}
+            | expression MINUS expression {
+    result = ast AST::ArithmeticOperator, :operator => val[1], :lval => val[0], :rval => val[2]
+}
+            | expression DIV expression {
+    result = ast AST::ArithmeticOperator, :operator => val[1], :lval => val[0], :rval => val[2]
+}
+            | expression TIMES expression {
+    result = ast AST::ArithmeticOperator, :operator => val[1], :lval => val[0], :rval => val[2]
+}
+            | expression LSHIFT expression {
+    result = ast AST::ArithmeticOperator, :operator => val[1], :lval => val[0], :rval => val[2]
+}
+            | expression RSHIFT expression {
+    result = ast AST::ArithmeticOperator, :operator => val[1], :lval => val[0], :rval => val[2]
+}
             | MINUS expression =UMINUS {
     result = ast AST::Minus, :value => val[1]
 }
-
-arithexpr: term arithop expression {
-    result = ast AST::ArithmeticOperator, :operator => val[1], :lval => val[0], :rval => val[2]
-} 
-
-arithop: PLUS | MINUS | TIMES | DIV | LSHIFT | RSHIFT
-
-booleanexpr: term booleanop expression {
-    result = ast AST::BooleanOperator, :operator => val[1], :lval => val[0], :rval => val[2]
-}
-
-booleanop: OR | AND
-
-comparison: term comparisonop expression {
+            | expression NOTEQUAL expression {
     result = ast AST::ComparisonOperator, :operator => val[1], :lval => val[0], :rval => val[2]
 }
-
-comparisonop: ISEQUAL | NOTEQUAL | GREATEREQUAL | GREATERTHAN | LESSTHAN | LESSEQUAL
-
-notexpr: NOT expression {
+            | expression ISEQUAL expression {
+    result = ast AST::ComparisonOperator, :operator => val[1], :lval => val[0], :rval => val[2]
+}
+            | expression GREATERTHAN expression {
+    result = ast AST::ComparisonOperator, :operator => val[1], :lval => val[0], :rval => val[2]
+}
+            | expression GREATEREQUAL expression {
+    result = ast AST::ComparisonOperator, :operator => val[1], :lval => val[0], :rval => val[2]
+}
+            | expression LESSTHAN expression {
+    result = ast AST::ComparisonOperator, :operator => val[1], :lval => val[0], :rval => val[2]
+}
+            | expression LESSEQUAL expression {
+    result = ast AST::ComparisonOperator, :operator => val[1], :lval => val[0], :rval => val[2]
+}
+            | NOT expression {
     result = ast AST::Not, :value => val[1]
 }
-
+            | expression AND expression {
+    result = ast AST::BooleanOperator, :operator => val[1], :lval => val[0], :rval => val[2]
+}            
+            | expression OR expression {
+    result = ast AST::BooleanOperator, :operator => val[1], :lval => val[0], :rval => val[2]
+}            
+            | LPAREN expression RPAREN {
+    result = val[1]
+}
 
 casestatement:  CASE rvalue LBRACE caseopts RBRACE {
     options = val[3]
