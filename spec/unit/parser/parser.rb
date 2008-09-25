@@ -58,23 +58,37 @@ describe Puppet::Parser do
 
     end
 
-    describe Puppet::Parser, "when parsing if complex expressions" do
-         it "should create a correct ast tree" do
-             AST::ComparisonOperator.expects(:new).with { 
-                 |h| h[:rval].is_a?(AST::Name) and h[:lval].is_a?(AST::Name) and h[:operator]==">"
-             }.returns("whatever")
-             AST::ComparisonOperator.expects(:new).with { 
-                 |h| h[:rval].is_a?(AST::Name) and h[:lval].is_a?(AST::Name) and h[:operator]=="=="
-             }.returns("whatever")
-             AST::BooleanOperator.expects(:new).with {
-                 |h| h[:rval]=="whatever" and h[:lval]=="whatever" and h[:operator]=="and"                
-             }
-             @parser.parse("if (1 > 2) and (1 == 2) { $var = 1 }")
-         end
+    describe Puppet::Parser, "when parsing complex 'if' test expressions" do
 
-         it "should raise an error on incorrect expression" do
-             lambda { @parser.parse("if (1 > 2 > ) or (1 == 2) { $var = 1 }") }.should raise_error
+        it "should create a correct ast tree" do
+            AST::ComparisonOperator.expects(:new).with { 
+                |h| h[:rval].is_a?(AST::Name) and h[:lval].is_a?(AST::Name) and h[:operator]==">"
+            }.returns("whatever")
+            AST::ComparisonOperator.expects(:new).with { 
+                |h| h[:rval].is_a?(AST::Name) and h[:lval].is_a?(AST::Name) and h[:operator]=="=="
+            }.returns("whatever")
+            AST::BooleanOperator.expects(:new).with {
+                |h| h[:rval]=="whatever" and h[:lval]=="whatever" and h[:operator]=="and"                
+            }
+            @parser.parse("if (1 > 2) and (1 == 2) { $var = 1 }")
         end
 
-     end
+        it "should raise an error on incorrect expression" do
+            lambda { @parser.parse("if (1 > 2 > ) or (1 == 2) { $var = 1 }") }.should raise_error
+        end
+
+    end
+
+    describe Puppet::Parser, "when parsing complex assignement expressions" do
+
+        it "should not throw an exception for complex expressions" do
+            lambda { @parser.parse("$var=(1 + -10)/(3 + 5.3) * (2e-2 / 2.45e-1) / (0x800 + 1)") }.should_not raise_error
+        end
+
+        it "should raise an error on incorrect expression" do
+            lambda { @parser.parse("$var=1 + + 2") }.should raise_error
+        end
+
+    end
+
  end
