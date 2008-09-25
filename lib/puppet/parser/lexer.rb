@@ -138,7 +138,7 @@ class Puppet::Parser::Lexer
 
     TOKENS.add_tokens "Whatever" => :DQTEXT, "Nomatter" => :SQTEXT, "alsonomatter" => :BOOLEAN
 
-    TOKENS.add_token :NUMBER, %r{(?:0[xX][0-9A-Fa-f]+|0?\d+(?:\.\d+)?(?:[eE]-?\d+)?)} do |lexer, value|
+    TOKENS.add_token :NUMBER, %r{\b(?:0[xX][0-9A-Fa-f]+|0?\d+(?:\.\d+)?(?:[eE]-?\d+)?)\b} do |lexer, value|
         [TOKENS[:NAME], value]
     end
 

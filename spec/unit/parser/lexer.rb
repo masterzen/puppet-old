@@ -221,7 +221,8 @@ end
 describe Puppet::Parser::Lexer::TOKENS[:NUMBER] do
     before do
         @token = Puppet::Parser::Lexer::TOKENS[:NUMBER]
-        @regex = Regexp.new('^'+@token.regex.source+'$')
+#        @regex = Regexp.new('^'+@token.regex.source+'$')
+        @regex = @token.regex
     end
 
     it "should match against numeric terms" do
@@ -236,15 +237,15 @@ describe Puppet::Parser::Lexer::TOKENS[:NUMBER] do
         @regex.should =~ "0xBEEF0023"
     end
 
-    it "should match against exp float terms" do
+    it "should match against float with exponent terms" do
         @regex.should =~ "10e23"
     end
 
-    it "should match against exp float terms with negative exponents" do
+    it "should match against float terms with negative exponents" do
         @regex.should =~ "10e-23"
     end
 
-    it "should match against exp float terms with fractional parts" do
+    it "should match against float terms with fractional parts and exponent" do
         @regex.should =~ "1.234e23"
     end
 
