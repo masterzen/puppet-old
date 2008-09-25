@@ -37,7 +37,7 @@ describe Puppet::Parser::Scope do
 
     describe Puppet::Parser::Scope, "when calling number?" do
 
-        it "should return nil is called with anything not a number" do
+        it "should return nil if called with anything not a number" do
             Puppet::Parser::Scope.number?([2]).should == nil
         end
 
@@ -65,7 +65,7 @@ describe Puppet::Parser::Scope do
             Puppet::Parser::Scope.number?("23.4e13").should == 23.4e13
         end
 
-        it "should return understand negative numbers" do
+        it "should understand negative numbers" do
             Puppet::Parser::Scope.number?("-234").should == -234
         end
 
