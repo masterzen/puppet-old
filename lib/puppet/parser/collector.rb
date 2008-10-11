@@ -1,7 +1,7 @@
 # An object that collects stored objects from the central cache and returns
 # them to the current host, yo.
 class Puppet::Parser::Collector
-    attr_accessor :type, :scope, :vquery, :equery, :form, :resources
+    attr_accessor :type, :scope, :vquery, :equery, :form, :resources, :overrides
 
     # Call the collection method, mark all of the returned objects as non-virtual,
     # and then delete this object from the list of collections to evaluate.
@@ -12,10 +12,9 @@ class Puppet::Parser::Collector
             Puppet.warning "Not collecting exported resources without storeconfigs"
             return false
         end
+
         if self.resources
-            if objects = collect_resources and ! objects.empty?
-                return objects
-            else
+            unless objects = collect_resources and ! objects.empty?
                 return false
             end
         else
@@ -25,10 +24,29 @@ class Puppet::Parser::Collector
             end
             if objects.empty?
                 return false
-            else
-                return objects
             end
         end
+
+        # we have an override for the collected resources
+        if @overrides and !objects.empty?
+
+            # tell the compiler we have some override for him
+            objects.each do |res|
+                res = Puppet::Parser::Resource.new(
+                    :type => res.type,
+                    :title => res.title,
+                    :params => overrides[:params],
+                    :file => overrides[:file],
+                    :line => overrides[:line],
+                    :source => overrides[:source],
+                    :scope => overrides[:scope]
+                )
+
+                scope.compiler.add_override(res)
+            end
+        end
+        # return our newly collected resources
+        objects
     end
 
     def initialize(scope, type, equery, vquery, form)
@@ -41,6 +59,16 @@ class Puppet::Parser::Collector
 
         raise(ArgumentError, "Invalid query form %s" % form) unless [:exported, :virtual].include?(form)
         @form = form
+    end
+
+    # add a resource override to the soon to be exported/realized resources
+    def add_override(hash)
+        unless hash[:params]
+            raise ArgumentError, "Exported resource try to override without parameters"
+        end
+
+        # schedule an override for an upcoming collection
+        @overrides = hash
     end
 
     private
@@ -156,7 +184,7 @@ class Puppet::Parser::Collector
         resource = obj.to_resource(self.scope)
 
         resource.exported = false
-        
+
         scope.compiler.add_resource(scope, resource)
 
         return resource
