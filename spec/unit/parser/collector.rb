@@ -39,6 +39,14 @@ describe Puppet::Parser::Collector, "when initializing" do
         @collector = Puppet::Parser::Collector.new(@scope, "resource::type", @equery, @vquery, @form)
         @collector.type.should == "Resource::Type"
     end
+
+    it "should accept an optional resource override" do
+        @collector = Puppet::Parser::Collector.new(@scope, "resource::type", @equery, @vquery, @form)
+        override = { :params => "whatever" }
+        @collector.add_override(override)
+        @collector.overrides.should equal(override)
+    end
+
 end
 
 describe Puppet::Parser::Collector, "when collecting specific virtual resources" do
@@ -176,6 +184,36 @@ describe Puppet::Parser::Collector, "when collecting virtual resources" do
         @compiler.expects(:resources).returns([one, two])
 
         @collector.evaluate.should be_false
+    end
+
+    it "should create a resource with overriden parameters" do
+        one = stub 'one', :type => "Mytype", :virtual? => true, :title => "test"
+        param = stub 'param'
+
+        one.expects(:virtual=).with(false)
+        @compiler.expects(:resources).returns([one])
+        @collector.add_override(:params => param )
+        @compiler.stubs(:add_override)
+
+        Puppet::Parser::Resource.expects(:new).with { |h|
+            h[:params] == param
+        }
+
+        @collector.evaluate
+    end
+
+    it "should tell the compiler about the overriden resources" do
+        one = stub 'one', :type => "Mytype", :virtual? => true, :title => "test"
+        param = stub 'param'
+
+        one.expects(:virtual=).with(false)
+        @compiler.expects(:resources).returns([one])
+        @collector.add_override(:params => param )
+        Puppet::Parser::Resource.stubs(:new).returns("whatever")
+
+        @compiler.expects(:add_override).with("whatever")
+
+        @collector.evaluate
     end
 
     it "should not return or mark non-matching resources" do
