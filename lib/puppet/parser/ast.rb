@@ -12,6 +12,8 @@ class Puppet::Parser::AST
 
     include Puppet::Util::Errors
     include Puppet::Util::MethodHelper
+    include Puppet::Util::Docs
+
     attr_accessor :line, :file, :parent, :scope
 
     # Does this ast object set something?  If so, it gets evaluated first.

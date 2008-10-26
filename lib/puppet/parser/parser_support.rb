@@ -272,6 +272,7 @@ class Puppet::Parser::Parser
         end
         code = options[:code]
         parent = options[:parent]
+        doc = options[:doc]
 
         # If the class is already defined, then add code to it.
         if other = @astset.classes[name]
@@ -300,6 +301,12 @@ class Puppet::Parser::Parser
                     other.code ||= code
                 end
             end
+
+            if other.doc and doc
+                other.doc += doc
+            else
+                other.doc ||= doc
+            end
         else
             # Define it anew.
             # Note we're doing something somewhat weird here -- we're setting
@@ -308,6 +315,8 @@ class Puppet::Parser::Parser
             args = {:namespace => name, :classname => name, :parser => self}
             args[:code] = code if code
             args[:parentclass] = parent if parent
+            args[:doc] = doc
+
             @astset.classes[name] = ast AST::HostClass, args
         end
 
@@ -332,7 +341,8 @@ class Puppet::Parser::Parser
             :arguments => options[:arguments],
             :code => options[:code],
             :parser => self,
-            :classname => name
+            :classname => name,
+            :doc => options[:doc]
         }
 
         [:code, :arguments].each do |param|
@@ -354,7 +364,8 @@ class Puppet::Parser::Parser
             name = name.to_s if name.is_a?(Symbol)
             args = {
                 :name => name,
-                :parser => self
+                :parser => self,
+                :doc => options[:doc]
             }
             if options[:code]
                 args[:code] = options[:code]
@@ -395,6 +406,7 @@ class Puppet::Parser::Parser
             self.string = string
         end
         begin
+            @yydebug = false
             main = yyparse(@lexer,:scan)
         rescue Racc::ParseError => except
             error = Puppet::ParseError.new(except)

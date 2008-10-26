@@ -17,7 +17,7 @@ class Puppet::Parser::Lexer
 
     # Our base token class.
     class Token
-        attr_accessor :regex, :name, :string, :skip, :incr_line, :skip_text
+        attr_accessor :regex, :name, :string, :skip, :incr_line, :skip_text, :accumulate
 
         def initialize(regex, name)
             if regex.is_a?(String)
@@ -30,6 +30,10 @@ class Puppet::Parser::Lexer
 
         def skip?
             self.skip
+        end
+
+        def accumulate?
+            self.accumulate
         end
 
         def to_s
@@ -155,7 +159,10 @@ class Puppet::Parser::Lexer
         [string_token, value]
     end
 
-    TOKENS.add_token :COMMENT, %r{#.*}, :skip => true
+    TOKENS.add_token :COMMENT, %r{#.*}, :accumulate => true, :skip => true do |lexer,value|
+        value.sub!('#','')
+        [self, value]
+    end
 
     TOKENS.add_token :RETURN, "\n", :skip => true, :incr_line => true, :skip_text => true
 
@@ -320,6 +327,7 @@ class Puppet::Parser::Lexer
         @namestack = []
         @indefine = false
         @expected = []
+        @commentstack = ['']
     end
 
     # Make any necessary changes to the token and/or value.
@@ -328,11 +336,17 @@ class Puppet::Parser::Lexer
 
         skip() if token.skip_text
 
-        return if token.skip
+        return if token.skip and not token.accumulate?
 
         token, value = token.convert(self, value) if token.respond_to?(:convert)
 
         return unless token
+
+        if token.accumulate?
+            @commentstack.last << value+"\n"
+        end
+
+        return if token.skip
 
         return token, value
     end
@@ -387,6 +401,13 @@ class Puppet::Parser::Lexer
             final_token, value = munge_token(matched_token, value)
 
             next unless final_token
+
+            # push comments on block change
+            if final_token.name == :LBRACE
+                commentpush('')
+            elsif final_token.name == :RBRACE
+                commentpop
+            end
 
             if match = @@pairs[value] and final_token.name != :DQUOTE and final_token.name != :SQUOTE
                 @expected << match
@@ -447,5 +468,20 @@ class Puppet::Parser::Lexer
     # just parse a string, not a whole file
     def string=(string)
         @scanner = StringScanner.new(string)
+    end
+
+    # returns the content of the currently accumulated content cache
+    def commentpop
+        return @commentstack.pop
+    end
+
+    def getcomment
+        comment = @commentstack.pop
+        @commentstack.push('')
+        return comment
+    end
+
+    def commentpush(value)
+        @commentstack.push(value)
     end
 end
