@@ -174,4 +174,16 @@ describe Puppet::Parser do
 
     end
 
+    describe Puppet::Parser, "when parsing comments before statement" do
+        it "should associate the documentation to the statement AST node" do
+            ast = @parser.parse("""
+            # comment
+            class test {}
+            """)
+
+            ast[:classes]["test"].doc.should == " comment\n"
+        end
+    end
+
+
  end
