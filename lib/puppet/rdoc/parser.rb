@@ -73,6 +73,20 @@ class Parser
         parse_elements(mod)
     end
 
+    def scan_for_include(container, code)
+        code.each do |stmt|
+            puts "stmt: %s" % stmt.inspect
+            scan_for_include(container,code) if stmt.is_a?(Puppet::Parser::AST::ASTArray)
+
+            if stmt.is_a?(Puppet::Parser::AST::Function) and stmt.name == "include"
+                stmt.arguments.each do |included|
+                    puts "included %s" % included.inspect
+                    container.add_include(Include.new(included.value, stmt.doc))
+                end
+            end
+        end
+    end
+
     # create documentation for a class
     def document_class(name, klass, container)
         container, name = get_class_or_module(container, name)
@@ -85,6 +99,11 @@ class Parser
         look_for_directives_in(container, comment) unless comment.empty?
         cls = container.add_class(NormalClass, name, superclass)
         cls.record_location(@top_level)
+
+        # scan class code for include
+        code = [klass.code] unless klass.code.is_a?(Puppet::Parser::AST::ASTArray)
+        scan_for_include(cls, code) unless code.nil?
+
         cls.comment = comment
     end
 
