@@ -444,7 +444,7 @@ ENDIF:methods
     <!-- if includes -->
 IF:includes
     <div id="includes">
-      <h3 class="section-bar">Included Modules</h3>
+      <h3 class="section-bar">Included Classes</h3>
 
       <div id="includes-list">
 START:includes
@@ -677,6 +677,38 @@ END:entries
 CLASS_INDEX = FILE_INDEX
 METHOD_INDEX = FILE_INDEX
 
+COMBO_INDEX = XHTML_PREAMBLE + %{
+<!--
+
+    %list_title1% &amp; %list_title2% 
+
+  -->
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>%list_title1% &amp; %list_title2%</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=%charset%" />
+  <link rel="stylesheet" href="%style_url%" type="text/css" />
+  <base target="docwin" />
+</head>
+<body>
+<div id="index">
+  <h1 class="section-bar">%list_title1%</h1>
+  <div id="index-entries">
+START:entries1
+    <a href="%href%">%name%</a><br />
+END:entries1
+  </div>
+  <h1 class="section-bar">%list_title2%</h1>
+    <div id="index-entries">
+START:entries2
+      <a href="%href%">%name%</a><br />
+END:entries2
+    </div>
+</div>
+</body>
+</html>
+}
+
 INDEX = %{<?xml version="1.0" encoding="%charset%"?>
 <!DOCTYPE html 
      PUBLIC "-//W3C//DTD XHTML 1.0 Frameset//EN"
@@ -692,11 +724,10 @@ INDEX = %{<?xml version="1.0" encoding="%charset%"?>
   <title>%title%</title>
   <meta http-equiv="Content-Type" content="text/html; charset=%charset%" />
 </head>
-<frameset rows="20%, 80%">
-    <frameset cols="25%,35%,45%">
-        <frame src="fr_file_index.html"   title="Files" name="Files" />
-        <frame src="fr_class_index.html"  name="Classes" />
-        <frame src="fr_method_index.html" name="Defines" />
+<frameset cols="20%, 80%">
+    <frameset rows="30%,70%">
+        <frame src="fr_modules_index.html"  name="Modules" />
+        <frame src="fr_combo_index.html" name="Classes & Defines" />
     </frameset>
     <frame src="%initial_page%" name="docwin" />
 </frameset>
