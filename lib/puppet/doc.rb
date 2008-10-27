@@ -71,11 +71,10 @@ class Puppet::Doc
             RDoc::RDoc::GENERATORS["puppet"] = RDoc::RDoc::Generator.new("puppet/rdoc/generators/puppet_generator.rb",
                                                                        "PuppetGenerator".intern,
                                                                        "puppet")
-            # specify our own format
-            options = ["--fmt", "puppet"]
+            # specify our own format & where to output
+            options = [ "--fmt", "puppet",
+                        "--op", outputdir ]
 
-            # where to save the result
-            options = ["--op", outputdir]
             options += files
 
             # launch the documentation process
