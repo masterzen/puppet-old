@@ -120,9 +120,13 @@ class Parser
         declaration = ""
         define.arguments.each do |arg,value|
             declaration << arg
-            declaration << " => " << value.to_s unless value.nil?
+            unless value.nil?
+                declaration << " => "
+                declaration << "#{value.value}"
+            end
             declaration << ", "
         end
+        declaration.chop!.chop! if declaration.size > 1
 
         # register method into the container
         meth =  AnyMethod.new(declaration, name)
