@@ -61,7 +61,7 @@ class Parser
         container.comment = comment unless comment.empty?
 
         # infer module name from directory
-        if @input_file_name =~ /([^\/]+)\/manifests\/[^\/]+\.pp/
+        if @input_file_name =~ /([^\/]+)\/manifests\/.+\.pp/
             name = $1
         end
 
@@ -69,6 +69,8 @@ class Parser
 
         mod = container.add_module(NormalModule, name)
         mod.record_location(@top_level)
+        puts "adding file_relative_name %s" % name
+        @top_level.file_relative_name = name
 
         parse_elements(mod)
     end

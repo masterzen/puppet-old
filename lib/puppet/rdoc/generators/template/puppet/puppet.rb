@@ -666,7 +666,7 @@ FILE_INDEX = XHTML_PREAMBLE + %{
   <h1 class="section-bar">%list_title%</h1>
   <div id="index-entries">
 START:entries
-    <a href="%href%">%name%</a><br />
+    <a href="%href%" target="classes">%name%</a><br />
 END:entries
   </div>
 </div>
@@ -687,21 +687,36 @@ COMBO_INDEX = XHTML_PREAMBLE + %{
 <head>
   <title>%list_title1% &amp; %list_title2%</title>
   <meta http-equiv="Content-Type" content="text/html; charset=%charset%" />
-  <link rel="stylesheet" href="%style_url%" type="text/css" />
+  <link rel="stylesheet" href="../%style_url%" type="text/css" />
   <base target="docwin" />
+  <SCRIPT LANGUAGE="JavaScript">
+  <!--
+  function load(url) {
+      parent.docwin.location.href = url;
+  }
+  //--></SCRIPT>
+  
 </head>
 <body>
+<div id="index">
+<h1 class="section-bar">Module</h1>
+  <div id="index-entries">
+START:module
+    <a href="%href%" onclick="load('%href%'); return true;">%name%</a><br />
+END:module
+  </div>
+  </div>
 <div id="index">
   <h1 class="section-bar">%list_title1%</h1>
   <div id="index-entries">
 START:entries1
-    <a href="%href%">%name%</a><br />
+<a href="%href%" onclick="load('%href%'); return true;">%name%</a><br />
 END:entries1
   </div>
   <h1 class="section-bar">%list_title2%</h1>
     <div id="index-entries">
 START:entries2
-      <a href="%href%">%name%</a><br />
+<a href="%href%" onclick="load('%href%'); return true;">%name%</a><br />
 END:entries2
     </div>
 </div>
@@ -726,8 +741,8 @@ INDEX = %{<?xml version="1.0" encoding="%charset%"?>
 </head>
 <frameset cols="20%, 80%">
     <frameset rows="30%,70%">
-        <frame src="fr_modules_index.html"  name="Modules" />
-        <frame src="fr_combo_index.html" name="Classes & Defines" />
+        <frame src="fr_modules_index.html"  title="All Modules" />
+        <frame src="fr_class_index.html" name="classes" title="Classes & Defines" />
     </frameset>
     <frame src="%initial_page%" name="docwin" />
 </frameset>
