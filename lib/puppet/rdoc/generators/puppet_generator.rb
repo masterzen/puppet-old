@@ -3,213 +3,232 @@ module Generators
 
     MODULE_DIR = "modules"
 
+    # This is a special HTMLGenerator tailored to Puppet manifests
     class PuppetGenerator < HTMLGenerator
 
-        # Generators may need to return specific subclasses depending
-        # on the options they are passed. Because of this
-        # we create them using a factory
-
         def PuppetGenerator.for(options)
-          AllReferences::reset
-          HtmlMethod::reset
+            AllReferences::reset
+            HtmlMethod::reset
 
-          if options.all_one_file
-            PuppetGeneratorInOne.new(options)
-          else
-            PuppetGenerator.new(options)
-          end
+            if options.all_one_file
+                PuppetGeneratorInOne.new(options)
+            else
+                PuppetGenerator.new(options)
+            end
         end
 
         def initialize(options) #:not-new:
-          @options    = options
-          load_html_template
+            @options    = options
+            load_html_template
         end
 
         def load_html_template
-          require 'puppet/rdoc/generators/template/puppet/puppet'
-          extend RDoc::Page
-        rescue LoadError
-          $stderr.puts "Could not find HTML template '#{template}'"
-          exit 99
+            begin
+                require 'puppet/rdoc/generators/template/puppet/puppet'
+                extend RDoc::Page
+            rescue LoadError
+                $stderr.puts "Could not find Puppet template '#{template}'"
+                exit 99
+            end
         end
 
         def gen_method_index
-            HtmlMethod.all_methods.each do |m|
-                puts "m %s %s" % [m.name, m.aref]
-            end
-          # gen_an_index(HtmlMethod.all_methods, 'Defines',
-          #              RDoc::Page::METHOD_INDEX,
-          #              "fr_method_index.html")
+            # we don't generate an all define index
+            # as the presentation is per module/per class
         end
 
         ##
         # Generate:
-        #
-        # * a list of HtmlFile objects for each TopLevel object.
-        # * a list of HtmlClass objects for each first level
-        #   class or module in the TopLevel objects
-        # * a complete list of all hyperlinkable terms (file,
-        #   class, module, and method names)
-
+        #  the list of modules
+        #  the list of classes and defines of a specific module
+        #  the list of all classes
         def build_indices
             @allfiles = []
-          @toplevels.each do |toplevel|
-              puts "for toplevel %s" % toplevel
-              file = HtmlFile.new(toplevel, @options, FILE_DIR)
-              classes = []
-              methods = []
-              toplevel.each_classmodule do |k|
-                  generate_class_list(classes, k, toplevel, CLASS_DIR)
-              end
-              HtmlMethod.all_methods.each do |m|
-                  if m.context.parent.toplevel == toplevel
-                      puts "m %s %s" % [m.name, m.aref]
-                      methods << m
-                  end
-              end
-              @classes += classes
-              @files << file
-            @allfiles << { "file" => file,  "classes" => classes, "methods" => methods }
-          end
-          # RDoc::TopLevel.all_classes_and_modules.each do |cls|
-          #   build_class_list(cls, @files[0], CLASS_DIR)
-          # end
 
+            # contains all the seen modules
+            @modules = {}
+            @allclasses = {}
+
+            # build the modules, classes and per modules classes and define list
+            @toplevels.each do |toplevel|
+                file = HtmlFile.new(toplevel, @options, FILE_DIR)
+                classes = []
+                methods = []
+
+                # find all classes of this toplevel
+                # store modules if we find one
+                toplevel.each_classmodule do |k|
+                    generate_class_list(classes, k, toplevel, CLASS_DIR)
+                end
+
+                # find all defines belonging to this toplevel
+                HtmlMethod.all_methods.each do |m|
+                    # find parent module, check this method is not already
+                    # defined.
+                    if m.context.parent.toplevel === toplevel
+                        methods << m
+                    end
+                end
+
+                classes.each do |k|
+                    @allclasses[k.index_name] = k if !@allclasses.has_key?(k.index_name)
+                end
+
+                @files << file
+                @allfiles << { "file" => file,  "classes" => classes, "methods" => methods }
+            end
+
+            @classes = @allclasses.values
+        end
+
+        def generate_module_list(modules, from, html_file)
+            if from.is_module?
+                @modules[from.name] = HtmlClass.new(from, html_file, class_dir, @options)
+            end
+            from.each_classmodule do |mod|
+                generate_module_list(classes, mod, html_file)
+            end
         end
 
         def generate_class_list(classes, from, html_file, class_dir)
-          classes << HtmlClass.new(from, html_file, class_dir, @options)
-          from.each_classmodule do |mod|
-            generate_class_list(classes, mod, html_file, class_dir)
-          end
+            if from.is_module? and !@modules.has_key?(from.name)
+                k = HtmlClass.new(from, html_file, class_dir, @options)
+                classes << k
+                @modules[from.name] = k
+            elsif !from.is_module?
+                k = HtmlClass.new(from, html_file, class_dir, @options)
+                classes << k
+            end
+            from.each_classmodule do |mod|
+                generate_class_list(classes, mod, html_file, class_dir)
+            end
         end
 
-        def build_class_list(from, html_file, class_dir)
-          @classes << HtmlClass.new(from, html_file, class_dir, @options)
-          from.each_classmodule do |mod|
-            build_class_list(mod, html_file, class_dir)
-          end
-        end
-
+        # generate all the subdirectories, modules, classes and files
         def gen_sub_directories
-            super
-          File.makedirs(MODULE_DIR)
-        rescue 
-          $stderr.puts $!.message
-          exit 1
+            begin
+                super
+                File.makedirs(MODULE_DIR)
+            rescue
+                $stderr.puts $!.message
+                exit 1
+            end
         end
 
+        # generate the index of modules
         def gen_file_index
-          gen_top_index(@files, 'All Modules',
+            gen_top_index(@modules.values, 'All Modules',
                        RDoc::Page::FILE_INDEX,
                        "fr_modules_index.html")
         end
 
+        # generate a top index
         def gen_top_index(collection, title, template, filename)
-          template = TemplatePage.new(RDoc::Page::FR_INDEX_BODY, template)
-          res = []
-          collection.sort.each do |f|
-            if f.document_self
-              res << { "href" => "#{MODULE_DIR}/fr_#{f.index_name}.html", "name" => f.index_name }
+            template = TemplatePage.new(RDoc::Page::FR_INDEX_BODY, template)
+            res = []
+            collection.sort.each do |f|
+                if f.document_self
+                    res << { "href" => "#{MODULE_DIR}/fr_#{f.index_name}.html", "name" => f.index_name }
+                end
             end
-          end
 
-          values = {
-            "entries"    => res,
-            'list_title' => CGI.escapeHTML(title),
-            'index_url'  => main_url,
-            'charset'    => @options.charset,
-            'style_url'  => style_url('', @options.css),
-          }
+            values = {
+                "entries"    => res,
+                'list_title' => CGI.escapeHTML(title),
+                'index_url'  => main_url,
+                'charset'    => @options.charset,
+                'style_url'  => style_url('', @options.css),
+            }
 
-          File.open(filename, "w") do |f|
-            template.write_html_on(f, values)
-          end
+            File.open(filename, "w") do |f|
+                template.write_html_on(f, values)
+            end
         end
 
+        # returns the initial_page url
         def main_url
-          main_page = @options.main_page
-          ref = nil
-          if main_page
-            ref = AllReferences[main_page]
-            if ref
-              ref = ref.path
-            else
-              $stderr.puts "Could not find main page #{main_page}"
+            main_page = @options.main_page
+            ref = nil
+            if main_page
+                ref = AllReferences[main_page]
+                if ref
+                    ref = ref.path
+                else
+                    $stderr.puts "Could not find main page #{main_page}"
+                end
             end
-          end
 
-          unless ref
-            for file in @files
-              if file.document_self
-                ref = "#{CLASS_DIR}/#{file.index_name}.html"
-                break
-              end
+            unless ref
+                for file in @files
+                    if file.document_self
+                        ref = "#{CLASS_DIR}/#{file.index_name}.html"
+                        break
+                    end
+                end
             end
-          end
 
-          unless ref
-            $stderr.puts "Couldn't find anything to document"
-            $stderr.puts "Perhaps you've used :stopdoc: in all classes"
-            exit(1)
-          end
+            unless ref
+                $stderr.puts "Couldn't find anything to document"
+                $stderr.puts "Perhaps you've used :stopdoc: in all classes"
+                exit(1)
+            end
 
-          ref
+            ref
         end
 
+        # generate the all class index file and the combo index
         def gen_class_index
             gen_an_index(@classes, 'All Classes',
                          RDoc::Page::CLASS_INDEX,
                          "fr_class_index.html")
             @allfiles.each do |file|
-          gen_composite_index(file["classes"],file["methods"], 'Classes', 'Defines',
-                       RDoc::Page::COMBO_INDEX,
-                       "#{MODULE_DIR}/fr_#{file["file"].context.file_relative_name}.html")
-                   end
+                gen_composite_index(file["classes"],file["methods"], 'Classes', 'Defines',
+                                    RDoc::Page::COMBO_INDEX,
+                                    "#{MODULE_DIR}/fr_#{file["file"].context.file_relative_name}.html")
+            end
         end
 
         def gen_composite_index(coll1, coll2, title1, title2, template, filename)
-          template = TemplatePage.new(RDoc::Page::FR_INDEX_BODY, template)
-          res1 = []
-          module_name = []
-          coll1.sort.each do |f|
-            if f.document_self
-                if f.context.is_module?
-                    module_name << { "href" => "../"+f.path, "name" => f.index_name }
-                else
-                    res1 << { "href" => "../"+f.path, "name" => f.index_name }
+            template = TemplatePage.new(RDoc::Page::FR_INDEX_BODY, template)
+            res1 = []
+            module_name = []
+            coll1.sort.each do |f|
+                if f.document_self
+                    if f.context.is_module?
+                        module_name << { "href" => "../"+f.path, "name" => f.index_name }
+                    else
+                        res1 << { "href" => "../"+f.path, "name" => f.index_name }
+                    end
                 end
             end
-          end
 
-          res2 = []
-          coll2.sort.each do |f|
-            if f.document_self
-                puts "combo f: %s %s" % [f.name,f.aref]
-              res2 << { "href" => "../"+f.path, "name" => f.index_name.sub(/\(.*\)$/,'') }
+            res2 = []
+            coll2.sort.each do |f|
+                if f.document_self
+                    res2 << { "href" => "../"+f.path, "name" => f.index_name.sub(/\(.*\)$/,'') }
+                end
             end
-          end
 
-          values = {
-              "module" => module_name,
-            "entries1"    => res1,
-            'list_title1' => CGI.escapeHTML(title1),
-            "entries2"    => res2,
-            'list_title2' => CGI.escapeHTML(title2),
-            'index_url'  => main_url,
-            'charset'    => @options.charset,
-            'style_url'  => style_url('', @options.css),
-          }
+            values = {
+                "module" => module_name,
+                "entries1"    => res1,
+                'list_title1' => CGI.escapeHTML(title1),
+                "entries2"    => res2,
+                'list_title2' => CGI.escapeHTML(title2),
+                'index_url'  => main_url,
+                'charset'    => @options.charset,
+                'style_url'  => style_url('', @options.css),
+            }
 
-         File.open(filename, "w") do |f|
+            File.open(filename, "w") do |f|
                 template.write_html_on(f, values)
-          end
+            end
         end
     end
 
     class PuppetGeneratorInOne < HTMLGeneratorInOne
         def gen_method_index
-          gen_an_index(HtmlMethod.all_methods, 'Defines')
+            gen_an_index(HtmlMethod.all_methods, 'Defines')
         end
     end
 

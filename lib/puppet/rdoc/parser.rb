@@ -57,8 +57,6 @@ class Parser
     def scan_top_level(container)
 
         comment = "" #  TODO will look into README
-        look_for_directives_in(container, comment)
-        container.comment = comment unless comment.empty?
 
         # infer module name from directory
         if @input_file_name =~ /([^\/]+)\/manifests\/.+\.pp/
@@ -67,22 +65,22 @@ class Parser
 
         puts "scanning module %s" % name
 
+        @top_level.file_relative_name = name
+        @stats.num_modules += 1
+        container, name  = get_class_or_module(container,name)
         mod = container.add_module(NormalModule, name)
         mod.record_location(@top_level)
-        puts "adding file_relative_name %s" % name
-        @top_level.file_relative_name = name
+        mod.comment = comment
 
         parse_elements(mod)
     end
 
     def scan_for_include(container, code)
         code.each do |stmt|
-            puts "stmt: %s" % stmt.inspect
             scan_for_include(container,code) if stmt.is_a?(Puppet::Parser::AST::ASTArray)
 
             if stmt.is_a?(Puppet::Parser::AST::Function) and stmt.name == "include"
                 stmt.arguments.each do |included|
-                    puts "included %s" % included.inspect
                     container.add_include(Include.new(included.value, stmt.doc))
                 end
             end
@@ -118,6 +116,8 @@ class Parser
         # split define name by :: to find the complete module hierarchy
         container, name = get_class_or_module(container,name)
 
+        return if container.find_local_symbol(name)
+
         # build up declaration
         declaration = ""
         define.arguments.each do |arg,value|
@@ -142,11 +142,15 @@ class Parser
 
     def parse_elements(container)
         @ast[:classes].each do |name, klass|
-            document_class(name,klass,container) unless name.empty?
+            if klass.file == @input_file_name
+                document_class(name,klass,container) unless name.empty?
+            end
         end
 
         @ast[:definitions].each do |name, define|
-            document_define(name,define,container)
+            if define.file == @input_file_name
+                document_define(name,define,container)
+            end
         end
     end
 
