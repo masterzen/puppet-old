@@ -1,5 +1,6 @@
 # Puppet "parser" for the rdoc system
-
+# The parser uses puppet parser and traverse the AST to instruct RDoc about
+# our current structures.
 
 # rdoc mandatory includes
 require "rdoc/code_objects"
@@ -12,8 +13,10 @@ module RDoc
 class Parser
     extend ParserFactory
 
+    # parser registration into RDoc
     parse_files_matching(/\.pp$/)
 
+    # called with the top level file
     def initialize(top_level, file_name, content, options, stats)
         @options = options
         @stats   = stats
@@ -22,8 +25,8 @@ class Parser
         @progress = $stderr unless options.quiet
     end
 
+    # main entry point
     def scan
-        # scan 
         environment = "development"
         @parser = Puppet::Parser::Parser.new(:environment => environment)
         @parser.file = @input_file_name
@@ -31,6 +34,8 @@ class Parser
         scan_top_level(@top_level)
         @top_level
     end
+
+    private
 
     # walk down the namespace and lookup/create container as needed
     def get_class_or_module(container, name)
@@ -55,15 +60,15 @@ class Parser
 
     # create documentation
     def scan_top_level(container)
-
-        comment = "" #  TODO will look into README
+        # use the module README as documentation for the module
+        comment = ""
+        readme = File.join(File.dirname(File.dirname(@input_file_name)), "README")
+        comment = File.open(readme,"r") { |f| f.read } if FileTest.readable?(readme)
 
         # infer module name from directory
         if @input_file_name =~ /([^\/]+)\/manifests\/.+\.pp/
             name = $1
         end
-
-        puts "scanning module %s" % name
 
         @top_level.file_relative_name = name
         @stats.num_modules += 1
@@ -124,7 +129,7 @@ class Parser
             declaration << arg
             unless value.nil?
                 declaration << " => "
-                declaration << "#{value.value}"
+                declaration << "'#{value.value}'"
             end
             declaration << ", "
         end

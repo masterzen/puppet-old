@@ -666,13 +666,47 @@ FILE_INDEX = XHTML_PREAMBLE + %{
   <h1 class="section-bar">%list_title%</h1>
   <div id="index-entries">
 START:entries
-    <a href="%href%" target="classes">%name%</a><br />
+    <a href="%href%">%name%</a><br />
 END:entries
   </div>
 </div>
 </body>
 </html>
 }
+
+TOP_INDEX = XHTML_PREAMBLE + %{
+<!--
+
+    %list_title%
+
+  -->
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>%list_title%</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=%charset%" />
+  <link rel="stylesheet" href="%style_url%" type="text/css" />
+  <base target="classes" />
+  <SCRIPT LANGUAGE="JavaScript">
+  <!--
+  function load(classlist,module) {
+      parent.classes.location.href = classlist;
+      parent.docwin.location.href = module;
+  }
+  //--></SCRIPT>
+</head>
+<body>
+<div id="index">
+  <h1 class="section-bar">%list_title%</h1>
+  <div id="index-entries">
+START:entries
+    <a href="%classlist%" onclick="load('%classlist%','%module%'); return true;">%name%</a><br />
+END:entries
+  </div>
+</div>
+</body>
+</html>
+}
+
 
 CLASS_INDEX = FILE_INDEX
 METHOD_INDEX = FILE_INDEX

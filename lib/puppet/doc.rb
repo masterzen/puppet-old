@@ -1,6 +1,59 @@
 
 class Puppet::Doc
 
+    # launch a rdoc documenation process
+    # with the files/dir passed in +files+
+    def self.rdoc(outputdir, files)
+        begin
+            # load our parser first
+            require 'puppet/rdoc/parser'
+
+            # then rdoc
+            require 'rdoc/rdoc'
+            r = RDoc::RDoc.new
+            RDoc::RDoc::GENERATORS["puppet"] = RDoc::RDoc::Generator.new("puppet/rdoc/generators/puppet_generator.rb",
+                                                                       "PuppetGenerator".intern,
+                                                                       "puppet")
+            # specify our own format & where to output
+            options = [ "--fmt", "puppet",
+                        "--quiet",
+                        "--op", outputdir ]
+
+            options += files
+
+            # launch the documentation process
+            r.document(options)
+        rescue RDoc::RDocError => e
+            raise Puppet::ParseError.new("RDoc error %s" % e)
+        end
+    end
+
+    # Entry point for "regular" documentation mode
+    # still to be refined.
+    def self.doc(outputdir, files)
+        # if outputdir is omitted
+        outputdir ||= "doc"
+        Dir.mkdir(outputdir) unless FileTest.directory?(outputdir)
+
+        # scan every files from files, if directory descend
+        manifests = []
+        files.each do |file|
+            if FileTest.directory?(file)
+                files.concat(Dir.glob(File.join(file, "*")))
+            elsif file =~ /\.pp$/ # got a manifest
+                manifests << file
+            end
+        end
+
+        # parse and document
+        environment = "development"
+        manifests.each do |manifest|
+            self.parse(outputdir, manifest)
+            # if we have a module, produce a module directory
+            # then a file per class and per defines
+        end
+    end
+
     def self.write_doc(outputdir, name, doc)
         f = File.new(File.join(outputdir,"#{name}.html"), "w")
         require 'rdiscount'
@@ -33,54 +86,4 @@ class Puppet::Doc
         end
     end
 
-
-    def self.doc(outputdir, files)
-        # if outputdir is omitted
-        outputdir ||= "doc"
-        Dir.mkdir(outputdir) unless FileTest.directory?(outputdir)
-
-        # scan every files from files, if directory descend
-        manifests = []
-        files.each do |file|
-            if FileTest.directory?(file)
-                files.concat(Dir.glob(File.join(file, "*")))
-            elsif file =~ /\.pp$/ # got a manifest
-                manifests << file
-            end
-        end
-
-        # parse and document
-        environment = "development"
-        manifests.each do |manifest|
-            self.parse(outputdir, manifest)
-            # if we have a module, produce a module directory
-            # then a file per class and per defines
-        end
-    end
-
-    # launch a rdoc documenation process
-    # with the files/dir passed in +files+
-    def self.rdoc(outputdir, files)
-        begin
-            # load our parser first
-            require 'puppet/rdoc/parser'
-
-            # then rdoc
-            require 'rdoc/rdoc'
-            r = RDoc::RDoc.new
-            RDoc::RDoc::GENERATORS["puppet"] = RDoc::RDoc::Generator.new("puppet/rdoc/generators/puppet_generator.rb",
-                                                                       "PuppetGenerator".intern,
-                                                                       "puppet")
-            # specify our own format & where to output
-            options = [ "--fmt", "puppet",
-                        "--op", outputdir ]
-
-            options += files
-
-            # launch the documentation process
-            r.document(options)
-        rescue RDoc::RDocError => e
-            raise Puppet::ParseError.new("RDoc error %s" % e)
-        end
-    end
 end

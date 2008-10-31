@@ -54,11 +54,12 @@ module Generators
                 file = HtmlFile.new(toplevel, @options, FILE_DIR)
                 classes = []
                 methods = []
+                modules = []
 
                 # find all classes of this toplevel
                 # store modules if we find one
                 toplevel.each_classmodule do |k|
-                    generate_class_list(classes, k, toplevel, CLASS_DIR)
+                    generate_class_list(classes, modules, k, toplevel, CLASS_DIR)
                 end
 
                 # find all defines belonging to this toplevel
@@ -75,32 +76,26 @@ module Generators
                 end
 
                 @files << file
-                @allfiles << { "file" => file,  "classes" => classes, "methods" => methods }
+                @allfiles << { "file" => file, "modules" => modules, "classes" => classes, "methods" => methods }
             end
 
             @classes = @allclasses.values
         end
 
-        def generate_module_list(modules, from, html_file)
-            if from.is_module?
-                @modules[from.name] = HtmlClass.new(from, html_file, class_dir, @options)
-            end
-            from.each_classmodule do |mod|
-                generate_module_list(classes, mod, html_file)
-            end
-        end
-
-        def generate_class_list(classes, from, html_file, class_dir)
+        def generate_class_list(classes, modules, from, html_file, class_dir)
             if from.is_module? and !@modules.has_key?(from.name)
                 k = HtmlClass.new(from, html_file, class_dir, @options)
                 classes << k
                 @modules[from.name] = k
+                modules << @modules[from.name]
+            elsif from.is_module?
+                modules << @modules[from.name]
             elsif !from.is_module?
                 k = HtmlClass.new(from, html_file, class_dir, @options)
                 classes << k
             end
             from.each_classmodule do |mod|
-                generate_class_list(classes, mod, html_file, class_dir)
+                generate_class_list(classes, modules, mod, html_file, class_dir)
             end
         end
 
@@ -117,9 +112,7 @@ module Generators
 
         # generate the index of modules
         def gen_file_index
-            gen_top_index(@modules.values, 'All Modules',
-                       RDoc::Page::FILE_INDEX,
-                       "fr_modules_index.html")
+            gen_top_index(@modules.values, 'All Modules', RDoc::Page::TOP_INDEX, "fr_modules_index.html")
         end
 
         # generate a top index
@@ -128,13 +121,62 @@ module Generators
             res = []
             collection.sort.each do |f|
                 if f.document_self
-                    res << { "href" => "#{MODULE_DIR}/fr_#{f.index_name}.html", "name" => f.index_name }
+                    res << { "classlist" => "#{MODULE_DIR}/fr_#{f.index_name}.html", "module" => "#{CLASS_DIR}/#{f.index_name}.html","name" => f.index_name }
                 end
             end
 
             values = {
                 "entries"    => res,
                 'list_title' => CGI.escapeHTML(title),
+                'index_url'  => main_url,
+                'charset'    => @options.charset,
+                'style_url'  => style_url('', @options.css),
+            }
+
+            File.open(filename, "w") do |f|
+                template.write_html_on(f, values)
+            end
+        end
+
+        # generate the all class index file and the combo index
+        def gen_class_index
+            gen_an_index(@classes, 'All Classes', RDoc::Page::CLASS_INDEX, "fr_class_index.html")
+            @allfiles.each do |file|
+                gen_composite_index(file["classes"],file["methods"], file['modules'], 'Classes', 'Defines',
+                                    RDoc::Page::COMBO_INDEX,
+                                    "#{MODULE_DIR}/fr_#{file["file"].context.file_relative_name}.html")
+            end
+        end
+
+        def gen_composite_index(coll1, coll2, coll3, title1, title2, template, filename)
+            template = TemplatePage.new(RDoc::Page::FR_INDEX_BODY, template)
+            res1 = []
+            coll1.sort.each do |f|
+                if f.document_self
+                    unless f.context.is_module?
+                        res1 << { "href" => "../"+f.path, "name" => f.index_name }
+                    end
+                end
+            end
+
+            res2 = []
+            coll2.sort.each do |f|
+                if f.document_self
+                    res2 << { "href" => "../"+f.path, "name" => f.index_name.sub(/\(.*\)$/,'') }
+                end
+            end
+
+            module_name = []
+            coll3.sort.each do |f|
+                module_name << { "href" => "../"+f.path, "name" => f.index_name }
+            end
+
+            values = {
+                "module" => module_name,
+                "entries1"    => res1,
+                'list_title1' => CGI.escapeHTML(title1),
+                "entries2"    => res2,
+                'list_title2' => CGI.escapeHTML(title2),
                 'index_url'  => main_url,
                 'charset'    => @options.charset,
                 'style_url'  => style_url('', @options.css),
@@ -174,55 +216,6 @@ module Generators
             end
 
             ref
-        end
-
-        # generate the all class index file and the combo index
-        def gen_class_index
-            gen_an_index(@classes, 'All Classes',
-                         RDoc::Page::CLASS_INDEX,
-                         "fr_class_index.html")
-            @allfiles.each do |file|
-                gen_composite_index(file["classes"],file["methods"], 'Classes', 'Defines',
-                                    RDoc::Page::COMBO_INDEX,
-                                    "#{MODULE_DIR}/fr_#{file["file"].context.file_relative_name}.html")
-            end
-        end
-
-        def gen_composite_index(coll1, coll2, title1, title2, template, filename)
-            template = TemplatePage.new(RDoc::Page::FR_INDEX_BODY, template)
-            res1 = []
-            module_name = []
-            coll1.sort.each do |f|
-                if f.document_self
-                    if f.context.is_module?
-                        module_name << { "href" => "../"+f.path, "name" => f.index_name }
-                    else
-                        res1 << { "href" => "../"+f.path, "name" => f.index_name }
-                    end
-                end
-            end
-
-            res2 = []
-            coll2.sort.each do |f|
-                if f.document_self
-                    res2 << { "href" => "../"+f.path, "name" => f.index_name.sub(/\(.*\)$/,'') }
-                end
-            end
-
-            values = {
-                "module" => module_name,
-                "entries1"    => res1,
-                'list_title1' => CGI.escapeHTML(title1),
-                "entries2"    => res2,
-                'list_title2' => CGI.escapeHTML(title2),
-                'index_url'  => main_url,
-                'charset'    => @options.charset,
-                'style_url'  => style_url('', @options.css),
-            }
-
-            File.open(filename, "w") do |f|
-                template.write_html_on(f, values)
-            end
         end
     end
 
