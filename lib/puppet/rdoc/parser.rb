@@ -68,6 +68,11 @@ class Parser
         # infer module name from directory
         if @input_file_name =~ /([^\/]+)\/manifests\/.+\.pp/
             name = $1
+        else
+            # skip .pp files that are not in manifests as we can't guarantee they're part
+            # of a module and we only know how to scan modules
+            container.document_self = false
+            return
         end
 
         @top_level.file_relative_name = name

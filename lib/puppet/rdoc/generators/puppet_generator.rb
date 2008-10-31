@@ -51,6 +51,7 @@ module Generators
 
             # build the modules, classes and per modules classes and define list
             @toplevels.each do |toplevel|
+                next unless toplevel.document_self
                 file = HtmlFile.new(toplevel, @options, FILE_DIR)
                 classes = []
                 methods = []
