@@ -95,7 +95,7 @@
 # Licensed under the GNU Public License
 
 require 'puppet'
-require 'puppet/network/client'
+require 'puppet/checksum'
 require 'getoptlong'
 
 options = [
@@ -167,28 +167,18 @@ if Puppet.settings.print_configs?
         exit(Puppet.settings.print_configs ? 0 : 1)
 end
 
-begin
-    if options[:local] or options[:bucket]
-        path = options[:bucket] || Puppet[:bucketdir]
-        client = Puppet::Network::Client.dipper.new(:Path => path)
-    else
-        require 'puppet/network/handler'
-        client = Puppet::Network::Client.dipper.new(:Server => Puppet[:server])
-    end
-rescue => detail
-    $stderr.puts detail
-    if Puppet[:trace]
-        puts detail.backtrace
-    end
-    exit(1)
+unless options[:local] or options[:bucket]
+    # make sure we send our requests to the server
+    Puppet::Checksum.terminus_class = :rest
+    Puppet[:http_enable_post_connection_check] = false
 end
 
 mode = ARGV.shift
 case mode
 when "get":
     md5 = ARGV.shift
-    out = client.getfile(md5)
-    print out
+    out = Puppet::Checksum.find(md5)
+    print out.content
 when "backup":
     ARGV.each do |file|
         unless FileTest.exists?(file)
@@ -199,13 +189,14 @@ when "backup":
             $stderr.puts "%s: cannot read file" % file
             next
         end
-        md5 = client.backup(file)
-        puts "%s: %s" % [file, md5]
+        sum = Puppet::Checksum.new(File.read(file), :path => file)
+        sum.save()
+        puts "%s: %s" % [file, sum.checksum]
     end
 when "restore":
     file = ARGV.shift
     md5 = ARGV.shift
-    client.restore(file, md5)
+    Puppet::Checksum.restore(file, md5)
 else
     raise "Invalid mode %s" % mode
 end

@@ -284,17 +284,10 @@ Suite.new :file, "File interactions" do
 end
 
 Suite.new :filebucket, "Filebucket interactions" do
-    def prepare
-        require 'tempfile'
-        @client = Puppet::Network::Client.dipper.new($args)
-    end
-
     newtest :backup, "Backed up file" do
-        Tempfile.open("bucket_testing") do |f|
-            f.print rand(1024)
-            f.close
-            @client.backup(f.path)
-        end
+        require 'puppet/checksum'
+        Puppet::Checksum.terminus_class = :rest
+        Puppet::Checksum.new(rand(1024).to_s, :path => "/tmp/test").save()
     end
 end
 

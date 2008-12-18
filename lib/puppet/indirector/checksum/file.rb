@@ -21,6 +21,10 @@ class Puppet::Checksum::File < Puppet::Indirector::File
     def save(request)
         path = File.dirname(path(request.key))
 
+        msg = "Adding %s(%s)" % [request.instance.path || "unknown", request.key]
+        msg += " from #{request.node}" if request.node
+        Puppet.info msg
+
         # Make the directories if necessary.
         unless FileTest.directory?(path)
             Puppet::Util.withumask(0007) do

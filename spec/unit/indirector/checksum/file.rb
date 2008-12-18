@@ -31,7 +31,7 @@ describe Puppet::Checksum::File do
         @store = Puppet::Checksum::File.new
 
         @value = "70924d6fa4b2d745185fa4660703a5c0"
-        @sum = stub 'sum', :name => @value
+        @sum = stub 'sum', :name => @value, :path => "/tmp/test"
 
         @dir = "/what/ever"
 
@@ -39,7 +39,7 @@ describe Puppet::Checksum::File do
 
         @path = @store.path(@value)
 
-        @request = stub 'request', :key => @value
+        @request = stub 'request', :key => @value, :instance => @sum, :node => nil
     end
 
 

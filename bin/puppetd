@@ -163,6 +163,7 @@ end
 
 require 'puppet'
 require 'puppet/network/client'
+require 'puppet/checksum'
 require 'getoptlong'
 
 options = [
@@ -326,6 +327,8 @@ end
 # until the REST cert transfers are working, it needs to
 # be local.
 Puppet::SSL::Host.ca_location = :remote
+
+Puppet::Checksum.terminus_class = :rest
 
 # We need tomake the client either way, we just don't start it
 # if --no-client is set.

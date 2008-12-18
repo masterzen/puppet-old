@@ -9,7 +9,7 @@ require 'puppet/checksum'
 
 describe Puppet::Checksum do
     it "should have 'Checksum' and the checksum algorithm when converted to a string" do
-        inst = Puppet::Checksum.new("whatever", "md5")
+        inst = Puppet::Checksum.new("whatever", :algorithm => "md5")
         inst.to_s.should == "Checksum<{md5}#{inst.checksum}>"
     end
 
@@ -28,7 +28,8 @@ end
 describe Puppet::Checksum, " when initializing" do
     before do
         @content = "this is some content"
-        @sum = Puppet::Checksum.new(@content)
+        @path = "/tmp/file"
+        @sum = Puppet::Checksum.new(@content, :path => @path)
     end
 
     it "should require content" do
@@ -48,7 +49,7 @@ describe Puppet::Checksum, " when initializing" do
     it "should not calculate the checksum until it is asked for" do
         require 'digest/md5'
         Digest::MD5.expects(:hexdigest).never
-        sum = Puppet::Checksum.new(@content, :md5)
+        sum = Puppet::Checksum.new(@content, :algorithm => :md5)
     end
 
     it "should remove the old checksum value if the algorithm is changed" do
@@ -64,12 +65,17 @@ describe Puppet::Checksum, " when initializing" do
     end
 
     it "should support specifying the algorithm during initialization" do
-        sum = Puppet::Checksum.new(@content, :sha1)
+        sum = Puppet::Checksum.new(@content, :algorithm => :sha1)
         sum.algorithm.should == :sha1
     end
 
+    it "should support specifying the path of the content" do
+        sum = Puppet::Checksum.new(@content, :path => @path)
+        sum.path.should == @path
+    end
+
     it "should fail when an unsupported algorithm is used" do
-        proc { Puppet::Checksum.new(@content, :nope) }.should raise_error(ArgumentError)
+        proc { Puppet::Checksum.new(@content, :algorithm => :nope) }.should raise_error(ArgumentError)
     end
 end
 
@@ -88,5 +94,50 @@ describe Puppet::Checksum, " when using back-ends" do
 
     it "should respond to :destroy" do
         Puppet::Checksum.should respond_to(:destroy)
+    end
+
+    it "should default to the 'file' terminus" do
+        Puppet::Checksum.indirection.terminus_class.should == :file
+    end
+
+    it "should delegate its name attribute to its checksum method" do
+        report = Puppet::Checksum.new("content")
+        report.expects(:checksum).returns "deadbeef"
+        report.name.should == "deadbeef"
+    end
+
+end
+
+describe Puppet::Checksum, " when restoring" do
+
+    before :each do
+        FileTest.stubs(:exists?).returns(false)
+        File.stubs(:open).returns(stub_everything 'file')
+        File.stubs(:chmod)
+    end
+
+    it "should call find to retrieve the checksum" do
+
+        Puppet::Checksum.expects(:find).with("deadbeef").returns(stub_everything 'sum')
+
+        Puppet::Checksum.restore("/tmp/test", "deadbeef")
+    end
+
+    it "should return the new checksum if file was filebucketed" do
+        sum = stub 'sum', :content => "content"
+        Puppet::Checksum.stubs(:md5).returns("deadcafe")
+        Puppet::Checksum.stubs(:find).with("deadbeef").returns(sum)
+
+        Puppet::Checksum.restore("/tmp/test", "deadbeef").should == "deadcafe"
+    end
+
+    it "should fetch the file from the filebucket if the file is the same" do
+        FileTest.stubs(:exists?).with("/tmp/test").returns(true)
+        Puppet::Checksum.stubs(:md5).returns("deadbeef")
+        File.stubs(:read).returns("content")
+
+        Puppet::Checksum.stubs(:find).never
+
+        Puppet::Checksum.restore("/tmp/test", "deadbeef")
     end
 end
