@@ -1,5 +1,5 @@
 require 'puppet'
-require 'getoptlong'
+require 'optparse'
 
 # This class handles all the aspects of a Puppet application/executable
 # * setting up options
@@ -15,19 +15,37 @@ require 'getoptlong'
 #      Puppet::Application[:example].run
 #
 # 
-# options = [
-#                   [ "--all",      "-a",  GetoptLong::NO_ARGUMENT ],
-#                   [ "--debug",    "-d",  GetoptLong::NO_ARGUMENT ] ]
-# Puppet::Application.new(:example, options) do
+# Puppet::Application.new(:example) do
 # 
-#     command do
+#     preinit do
+#         # perform some pre initialization
+#         @all = false
+#     end
+# 
+#     # dispatch is called to know to what command to call
+#     dispatch do
 #         ARGV.shift
 #     end
+#
+#     option("--arg ARGUMENT") do |v|
+#         @args << v
+#     end
 # 
-#     option(:all) do
-#         @all = true
+#     option("--debug", "-d") do |v|
+#         @debug = v
+#     end
+# 
+#     option("--all", "-a:) do |v|
+#         @all = v
 #     end
 #     
+#     unknown do |opt,arg|
+#         # last chance to manage an option
+#         ...
+#         # let's say to the framework we finally handle this option
+#         true
+#     end
+#
 #     command(:read) do
 #         # read action
 #     end
@@ -38,17 +56,26 @@ require 'getoptlong'
 # 
 # end
 #
-# === Options
-# When creating a Puppet::Application, the caller should pass an array in the GetoptLong 
-# options format to the initializer.
-# This application then parses ARGV and on each found options:
-# * If the option has been defined in the options array:
-#  * If the application defined an option with option(<option-name>) it's block executed
-#  * Or, a global options is set either with the argument or true if the option doesn't require an argument 
-# * If the option is unknown, and an option(:unknown) was registered then the argument is managed by it.
-# * and finally, if none of the above has worked, the option is sent to Puppet.settings
+# === Preinit
+# The preinit block is the first code to be called in your application, before option parsing,
+# setup or command execution.
 #
-# --help is managed directly by the Puppet::Application class
+# === Options
+# Puppet::Application uses +OptionParser+ to manage the application options.
+# Options are defined with the +option+ method to which are passed various 
+# arguments, including the long option, the short option, a description...
+# Refer to +OptionParser+ documentation for the exact format.
+# * If the option method is given a block, this one will be called whenever
+# the option is encountered in the command-line argument.
+# * If the option method has no block, a default functionnality will be used, that
+# stores the argument (or true/false if the option doesn't require an argument) in
+# the global (to the application) options array.
+# * If a given option was not defined by a the +option+ method, but it exists as a Puppet settings:
+#  * if +unknown+ was used with a block, it will be called with the option name and argument
+#  * if +unknown+ wasn't used, then the option/argument is handed to Puppet.settings.handlearg for
+#    a default behavior
+#
+# --help is managed directly by the Puppet::Application class, but can be overriden.
 #
 # === Setup
 # Applications can use the setup block to perform any initialization.
@@ -67,7 +94,7 @@ class Puppet::Application
         include Puppet::Util
     end
 
-    attr_reader :options
+    attr_reader :options, :opt_parser
 
     def self.[](name)
         name = symbolize(name)
@@ -94,10 +121,25 @@ class Puppet::Application
         meta_def(symbolize(name), &block)
     end
 
+    # used as a catch-all for unknown option
+    def unknown(&block)
+        meta_def(:handle_unknown, &block)
+    end
+
     # used to declare code that handle an option
-    def option(name, &block)
-        fname = "handle_#{name}"
-        meta_def(symbolize(fname), &block)
+    def option(*options, &block)
+        long = options.find { |opt| opt =~ /^--/ }.gsub(/^--(?:\[no-\])?([^ =]+).*$/, '\1' ).gsub('-','_')
+        fname = "handle_#{long}"
+        if (block_given?)
+            meta_def(symbolize(fname), &block)
+        else
+            meta_def(symbolize(fname)) do |value|
+                self.options["#{long}".to_sym] = value
+            end
+        end
+        @opt_parser.on(*options) do |value|
+            self.send(symbolize(fname), value)
+        end
     end
 
     # used to declare accessor in a more natural way in the 
@@ -128,10 +170,10 @@ class Puppet::Application
         meta_def(:run_preinit, &block)
     end
 
-    def initialize(name, options = [], &block)
-        name = symbolize(name)
+    def initialize(name, banner = nil, &block)
+        @opt_parser = OptionParser.new(banner)
 
-        @getopt = options
+        name = symbolize(name)
 
         setup do 
             default_setup
@@ -143,6 +185,10 @@ class Puppet::Application
 
         # empty by default
         preinit do
+        end
+
+        option("--help", "-h") do |v|
+            help
         end
 
         @options = {}
@@ -190,29 +236,42 @@ class Puppet::Application
     end
 
     def parse_options
-        option_names = @getopt.collect { |a| a[0] }
+        # get all puppet options
+        optparse_opt = []
+        optparse_opt = Puppet.settings.optparse_addargs(optparse_opt)
 
-        Puppet.settings.addargs(@getopt)
-        result = GetoptLong.new(*@getopt)
-
-        begin
-            result.each do |opt, arg|
-                key = opt.gsub(/^--/, '').gsub(/-/,'_').to_sym
-
-                method = "handle_#{key}"
-                if respond_to?(method)
-                    send(method, arg)
-                elsif option_names.include?(opt)
-                    @options[key] = arg || true
-                else
-                    unless respond_to?(:handle_unknown) and send(:handle_unknown, opt, arg)
-                        Puppet.settings.handlearg(opt, arg)
-                    end
-                end
+        # convert them to OptionParser format
+        optparse_opt.each do |option|
+            @opt_parser.on(*option) do |arg|
+                handlearg(option[0], arg)
             end
-        rescue GetoptLong::InvalidOption => detail
+        end
+
+        # scan command line argument
+        begin
+            @opt_parser.parse!
+        rescue OptionParser::ParseError => detail
+            $stderr.puts detail
             $stderr.puts "Try '#{$0} --help'"
             exit(1)
+        end
+    end
+
+    def handlearg(opt, arg)
+        # rewrite --[no-]option to --no-option if that's what was given
+        if opt =~ /\[no-\]/ and !arg
+            opt = opt.gsub(/\[no-\]/,'no-')
+        end
+        # otherwise remove the [no-] prefix to not confuse everybody
+        opt = opt.gsub(/\[no-\]/, '')
+        unless respond_to?(:handle_unknown) and send(:handle_unknown, opt, arg)
+            # Puppet.settings.handlearg doesn't handle direct true/false :-)
+            if arg.is_a?(FalseClass)
+                arg = "false"
+            elsif arg.is_a?(TrueClass)
+                arg = "true"
+            end
+            Puppet.settings.handlearg(opt, arg)
         end
     end
 
@@ -221,9 +280,9 @@ class Puppet::Application
         exit(code)
     end
 
-    def handle_help(arg)
+    def help
         if Puppet.features.usage?
-            RDoc::usage && exit
+            ::RDoc::usage && exit
         else
             puts "No help available unless you have RDoc::usage installed"
             exit

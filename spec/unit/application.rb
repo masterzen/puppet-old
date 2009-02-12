@@ -42,9 +42,8 @@ describe Puppet::Application do
             @argv_bak = ARGV.dup
             ARGV.clear
 
-            Puppet.settings.stubs(:addargs)
-            @opt = stub 'opt', :each => nil
-            GetoptLong.stubs(:new).returns(@opt)
+            Puppet.settings.stubs(:optparse_addargs).returns([])
+            @app = Puppet::Application.new(:test)
         end
 
         after :each do
@@ -52,172 +51,97 @@ describe Puppet::Application do
             ARGV << @argv_bak
         end
 
-        it "should give options to Puppet.settings.addargs" do
-            options = []
+        it "should get options from Puppet.settings.optparse_addargs" do
+            Puppet.settings.expects(:optparse_addargs).returns([])
 
-            Puppet.settings.expects(:addargs).with(options)
-
-            Puppet::Application.new(:test, options).parse_options
+            @app.parse_options
         end
 
-        it "should scan command line arguments with Getopt" do
-            options = []
+        it "should add Puppet.settings options to OptionParser" do
+            Puppet.settings.stubs(:optparse_addargs).returns( [["--option","-o", "Funny Option"]])
 
-            GetoptLong.expects(:new).returns(stub_everything)
+            @app.opt_parser.expects(:on).with { |*arg,&block| arg == ["--option","-o", "Funny Option"] }
 
-            Puppet::Application.new(:test, options).parse_options
+            @app.parse_options
         end
 
-        it "should loop around one argument given on command line" do
-            options = [[ "--one", "-o", GetoptLong::NO_ARGUMENT ]]
-            ARGV << [ "--one" ]
-            Puppet.settings.stubs(:handlearg)
+        it "should ask OptionParser to parse the command-line argument" do
+            @app.opt_parser.expects(:parse!)
 
-            @opt.expects(:each).yields("--one", nil)
-
-            Puppet::Application.new(:test, options).parse_options
-        end
-
-        it "should loop around all arguments given on command line" do
-            options = [ [ "--one", "-o", GetoptLong::NO_ARGUMENT ],
-                        [ "--two", "-t", GetoptLong::NO_ARGUMENT ]
-                        ]
-            ARGV << [ "--one", "--two" ]
-            Puppet.settings.stubs(:handlearg)
-
-            @opt.expects(:each).multiple_yields(["--one", nil],["--two", nil])
-
-            Puppet::Application.new(:test, options).parse_options
-        end
-
-        it "should call the method named handle_<option> if it exists" do
-            options = [[ "--name", "-n", GetoptLong::NO_ARGUMENT ]]
-            ARGV << [ "--name" ]
-            @opt.stubs(:each).yields("--name", nil)
-
-            app = Puppet::Application.new(:test, options)
-            app.stubs(:respond_to).with(:handle_name).returns(true)
-
-            app.expects(:handle_name)
-
-            app.parse_options
-        end
-
-        it "should handle gracefully options containing '-'" do
-            options = [[ "--name-with-dash", "-n", GetoptLong::NO_ARGUMENT ]]
-            ARGV << [ "--name-with-dash" ]
-            @opt.stubs(:each).yields("--name-with-dash", nil)
-
-            app = Puppet::Application.new(:test, options)
-            app.stubs(:respond_to).with(:handle_name_with_dash).returns(true)
-
-            app.expects(:handle_name_with_dash)
-
-            app.parse_options
-        end
-
-        it "should call the method named handle_<option> if it exists and pass argument" do
-            options = [[ "--name", "-n", GetoptLong::REQUIRED_ARGUMENT ]]
-            ARGV << [ "--name" ]
-            arg = stub 'arg'
-            @opt.stubs(:each).yields("--name", arg)
-
-            app = Puppet::Application.new(:test, options)
-            app.stubs(:respond_to).with(:name).returns(true)
-
-            app.expects(:handle_name).with(arg)
-
-            app.parse_options
-        end
-
-        describe "with 'no argument' options" do
-            it "should store true in Application.options if present and no code blocks" do
-                options = [[ "--one", "-o", GetoptLong::NO_ARGUMENT ]]
-                ARGV << [ "--one" ]
-                @opt.stubs(:each).yields("--one", nil)
-
-                app = Puppet::Application.new(:test, options)
-                app.options.expects(:[]=).with(:one, true)
-
-                app.parse_options
-            end
-        end
-
-        describe "with options with an argument" do
-            it "should store the argument value in Application.options if present and no code blocks" do
-                options = [[ "--one", "-o", GetoptLong::REQUIRED_ARGUMENT ]]
-                argument = stub 'arg'
-                ARGV << [ "--one" ]
-                @opt.stubs(:each).yields("--one", argument)
-
-                app = Puppet::Application.new(:test, options)
-                app.options.expects(:[]=).with(:one, argument)
-
-                app.parse_options
-            end
+            @app.parse_options
         end
 
         describe "when using --help" do
-            confine "requires RDoc" => Puppet.features.usage?
+            confine "rdoc" => Puppet.features.usage?
 
             it "should call RDoc::usage and exit" do
-                options = [[ "--help", "-h", GetoptLong::REQUIRED_ARGUMENT ]]
-                ARGV << [ "--help" ]
-                @opt.stubs(:each).yields("--help", nil)
-                app = Puppet::Application.new(:test, options)
-
-                app.expects(:exit)
+                @app.expects(:exit)
                 RDoc.expects(:usage).returns(true)
 
-                app.parse_options
+                @app.handle_help(nil)
             end
 
         end
 
-        it "should pass unknown arguments to handle_unknown if it is defined" do
-            options = []
-            ARGV << [ "--not-handled" ]
-            @opt.stubs(:each).yields("--not-handled", nil)
-            app = Puppet::Application.new(:test, options)
+        describe "when dealing with an argument not declared directly by the application" do
+            it "should pass it to handle_unknown if this method exists" do
+                Puppet.settings.stubs(:optparse_addargs).returns([["--not-handled"]])
+                @app.opt_parser.stubs(:on).yields("value")
 
-            app.expects(:handle_unknown).with("--not-handled", nil).returns(true)
+                @app.expects(:handle_unknown).with("--not-handled", "value").returns(true)
 
-            app.parse_options
+                @app.parse_options
+            end
+
+            it "should pass it to Puppet.settings if handle_unknown says so" do
+                Puppet.settings.stubs(:optparse_addargs).returns([["--topuppet"]])
+                @app.opt_parser.stubs(:on).yields("value")
+
+                @app.stubs(:handle_unknown).with("--topuppet", "value").returns(false)
+
+                Puppet.settings.expects(:handlearg).with("--topuppet", "value")
+                @app.parse_options
+            end
+
+            it "should pass it to Puppet.settings if there is no handle_unknown method" do
+                Puppet.settings.stubs(:optparse_addargs).returns([["--topuppet"]])
+                @app.opt_parser.stubs(:on).yields("value")
+
+                @app.stubs(:respond_to?).returns(false)
+
+                Puppet.settings.expects(:handlearg).with("--topuppet", "value")
+                @app.parse_options
+            end
+
+            it "should transform boolean false value to string for Puppet.settings" do
+                Puppet.settings.expects(:handlearg).with("--option", "false")
+                @app.handlearg("--option", false)
+            end
+
+            it "should transform boolean true value to string for Puppet.settings" do
+                Puppet.settings.expects(:handlearg).with("--option", "true")
+                @app.handlearg("--option", true)
+            end
+
+            it "should transform boolean option to normal form for Puppet.settings" do
+                Puppet.settings.expects(:handlearg).with("--option", "true")
+                @app.handlearg("--[no-]option", true)
+            end
+
+            it "should transform boolean option to no- form for Puppet.settings" do
+                Puppet.settings.expects(:handlearg).with("--no-option", "false")
+                @app.handlearg("--[no-]option", false)
+            end
+
         end
 
-        it "should pass back not directly or by handle_unknown handled arguments to Puppet.settings" do
-            options = []
-            ARGV << [ "--topuppet" ]
-            @opt.stubs(:each).yields("--topuppet", nil)
-            app = Puppet::Application.new(:test, options)
-            app.stubs(:handle_unknown).with("--topuppet", nil).returns(false)
-
-            Puppet.settings.expects(:handlearg).with("--topuppet", nil)
-
-            app.parse_options
-        end
-
-        it "should pass back unknown arguments to Puppet.settings if no handle_unknown method exists" do
-            options = []
-            ARGV << [ "--topuppet" ]
-            @opt.stubs(:each).yields("--topuppet", nil)
-            app = Puppet::Application.new(:test, options)
-
-            Puppet.settings.expects(:handlearg).with("--topuppet", nil)
-
-            app.parse_options
-        end
-
-        it "should exit if getopt raise an error" do
-            options = [[ "--pouet", "-p", GetoptLong::REQUIRED_ARGUMENT ]]
-            ARGV << [ "--do-not-exist" ]
-            @opt.stubs(:each).raises(GetoptLong::InvalidOption.new)
+        it "should exit if OptionParser raises an error" do
             $stderr.stubs(:puts)
-            app = Puppet::Application.new(:test, options)
+            @app.opt_parser.stubs(:parse!).raises(OptionParser::ParseError.new("blah blah"))
 
-            app.expects(:exit)
+            @app.expects(:exit)
 
-            lambda { app.parse_options }.should_not raise_error
+            lambda { @app.parse_options }.should_not raise_error
         end
 
     end
@@ -349,18 +273,104 @@ describe Puppet::Application do
             @app = Puppet::Application.new(:test)
         end
 
-        it "should create a new method with newcommand" do
+        it "should create a new method with command" do
             @app.command(:test) do
             end
 
             @app.should respond_to(:test)
         end
 
-        it "should create a new method with newoption" do
-            @app.option(:test) do
+        describe "when calling attr_accessor" do
+            it "should create a reader method" do
+                @app.attr_accessor(:attribute)
+
+                @app.should respond_to(:attribute)
             end
 
-            @app.should respond_to(:handle_test)
+            it "should create a reader that delegates to instance_variable_get" do
+                @app.attr_accessor(:attribute)
+
+                @app.expects(:instance_variable_get).with(:@attribute)
+                @app.attribute
+            end
+
+            it "should create a writer method" do
+                @app.attr_accessor(:attribute)
+
+                @app.should respond_to(:attribute=)
+            end
+
+            it "should create a writer that delegates to instance_variable_set" do
+                @app.attr_accessor(:attribute)
+
+                @app.expects(:instance_variable_set).with(:@attribute, 1234)
+                @app.attribute=1234
+            end
+        end
+
+        describe "when calling option" do
+            it "should create a new method named after the option" do
+                @app.option("--test1","-t") do
+                end
+
+                @app.should respond_to(:handle_test1)
+            end
+
+            it "should transpose in option name any '-' into '_'" do
+                @app.option("--test-dashes-again","-t") do
+                end
+
+                @app.should respond_to(:handle_test_dashes_again)
+            end
+
+            it "should create a new method called handle_test2 with option(\"--[no-]test2\")" do
+                @app.option("--[no-]test2","-t") do
+                end
+
+                @app.should respond_to(:handle_test2)
+            end
+
+            describe "when a block is passed" do
+                it "should create a new method with it" do
+                    @app.option("--[no-]test2","-t") do
+                        raise "I can't believe it, it works!"
+                    end
+
+                    lambda { @app.handle_test2 }.should raise_error
+                end
+
+                it "should declare the option to OptionParser" do
+                    @app.opt_parser.expects(:on).with { |*arg,&block| arg[0] == "--[no-]test3" }
+
+                    @app.option("--[no-]test3","-t") do
+                    end
+                end
+
+                it "should pass a block that calls our defined method" do
+                    @app.opt_parser.stubs(:on).yields(nil)
+
+                    @app.expects(:send).with(:handle_test4, nil)
+
+                    @app.option("--test4","-t") do
+                    end
+                end
+            end
+
+            describe "when no block is given" do
+                it "should declare the option to OptionParser" do
+                    @app.opt_parser.expects(:on).with("--test4","-t")
+
+                    @app.option("--test4","-t")
+                end
+
+                it "should give to OptionParser a block that adds the the value to the options array" do
+                    @app.opt_parser.stubs(:on).with("--test4","-t").yields(nil)
+
+                    @app.options.expects(:[]=).with(:test4,nil)
+
+                    @app.option("--test4","-t")
+                end
+            end
         end
 
         it "should create a method called run_setup with setup" do
@@ -369,6 +379,21 @@ describe Puppet::Application do
 
             @app.should respond_to(:run_setup)
         end
+
+        it "should create a method called run_preinit with preinit" do
+            @app.preinit do
+            end
+
+            @app.should respond_to(:run_preinit)
+        end
+
+        it "should create a method called handle_unknown with unknown" do
+            @app.unknown do
+            end
+
+            @app.should respond_to(:handle_unknown)
+        end
+
 
         it "should create a method called get_command with dispatch" do
             @app.dispatch do
