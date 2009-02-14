@@ -58,6 +58,18 @@ describe "puppetrun" do
     end
 
     describe "when applying options" do
+
+        [:all, :foreground, :debug, :ping, :test].each do |option|
+            it "should declare handle_#{option} method" do
+                @puppetrun.should respond_to("handle_#{option}".to_sym)
+            end
+
+            it "should store argument value when calling handle_#{option}" do
+                @puppetrun.options.expects(:[]=).with(option, 'arg')
+                @puppetrun.send("handle_#{option}".to_sym, 'arg')
+            end
+        end
+
         it "should exit after printing the version" do
             @puppetrun.stubs(:puts)
 

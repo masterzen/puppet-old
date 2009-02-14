@@ -13,26 +13,48 @@ end
 require 'puppet'
 require 'puppet/application'
 
-puppetrun_options = [
-    [ "--all",      "-a",       GetoptLong::NO_ARGUMENT ],
-    [ "--tag",      "-t",       GetoptLong::REQUIRED_ARGUMENT ],
-    [ "--class",    "-c",       GetoptLong::REQUIRED_ARGUMENT ],
-    [ "--foreground", "-f",     GetoptLong::NO_ARGUMENT ],
-    [ "--debug",    "-d",       GetoptLong::NO_ARGUMENT ],
-    [ "--help",     "-h",       GetoptLong::NO_ARGUMENT ],
-    [ "--host",                 GetoptLong::REQUIRED_ARGUMENT ],
-    [ "--parallel", "-p",       GetoptLong::REQUIRED_ARGUMENT ],
-    [ "--ping",     "-P",       GetoptLong::NO_ARGUMENT ],
-    [ "--no-fqdn",  "-n",       GetoptLong::NO_ARGUMENT ],
-    [ "--test",                 GetoptLong::NO_ARGUMENT ],
-    [ "--version",  "-V",       GetoptLong::NO_ARGUMENT ]
-]
-
-Puppet::Application.new(:puppetrun, puppetrun_options) do
+Puppet::Application.new(:puppetrun) do
 
     should_not_parse_config
 
     attr_accessor :hosts, :tags, :classes
+
+    option("--all","-a")
+    option("--foreground","-f")
+    option("--debug","-d")
+    option("--ping","-P")
+    option("--test")
+
+    option("--version", "-V") do |arg|
+        puts "%s" % Puppet.version
+        exit
+    end
+
+    option("--host HOST") do |arg|
+        @hosts << arg
+    end
+
+    option("--tag TAG", "-t") do |arg|
+        @tags << arg
+    end
+
+    option("--class CLASS", "-c") do |arg|
+        @classes << arg
+    end
+
+    option("--no-fqdn", "-n") do |arg|
+        options[:fqdn] = false
+    end
+
+    option("--parallel PARALLEL", "-p") do |arg|
+        begin
+            options[:parallel] = Integer(arg)
+        rescue
+            $stderr.puts "Could not convert %s to an integer" % arg.inspect
+            exit(23)
+        end
+    end
+
 
     dispatch do
         options[:test] ? :test : :main
@@ -196,33 +218,4 @@ Puppet::Application.new(:puppetrun, puppetrun_options) do
 
     end
 
-    option(:version) do |arg|
-        puts "%s" % Puppet.version
-        exit
-    end
-
-    option(:host) do |arg|
-        @hosts << arg
-    end
-
-    option(:tag) do |arg|
-        @tags << arg
-    end
-
-    option(:class) do |arg|
-        @classes << arg
-    end
-
-    option(:no_fqdn) do |arg|
-        options[:fqdn] = false
-    end
-
-    option(:parallel) do |arg|
-        begin
-            options[:parallel] = Integer(arg)
-        rescue
-            $stderr.puts "Could not convert %s to an integer" % arg.inspect
-            exit(23)
-        end
-    end
 end
