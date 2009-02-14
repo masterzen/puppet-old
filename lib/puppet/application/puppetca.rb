@@ -2,26 +2,42 @@ require 'puppet'
 require 'puppet/application'
 require 'puppet/ssl/certificate_authority'
 
-puppetca_options = [
-    [ "--all",      "-a",  GetoptLong::NO_ARGUMENT ],
-    [ "--clean",    "-c",  GetoptLong::NO_ARGUMENT ],
-    [ "--debug",    "-d",  GetoptLong::NO_ARGUMENT ],
-    [ "--generate", "-g",  GetoptLong::NO_ARGUMENT ],
-    [ "--help",     "-h",  GetoptLong::NO_ARGUMENT ],
-    [ "--list",     "-l",  GetoptLong::NO_ARGUMENT ],
-    [ "--print",    "-p",  GetoptLong::NO_ARGUMENT ],
-    [ "--revoke",   "-r",  GetoptLong::NO_ARGUMENT ],
-    [ "--sign",     "-s",  GetoptLong::NO_ARGUMENT ],
-    [ "--verify",          GetoptLong::NO_ARGUMENT ],
-	[ "--version",	"-V",  GetoptLong::NO_ARGUMENT ],
-    [ "--verbose",  "-v",  GetoptLong::NO_ARGUMENT ]
-]
-
-Puppet::Application.new(:puppetca, puppetca_options) do
+Puppet::Application.new(:puppetca) do
 
     should_parse_config
 
     attr_accessor :mode, :all, :ca
+
+    def find_mode(opt)
+        modes = Puppet::SSL::CertificateAuthority::Interface::INTERFACE_METHODS
+        tmp = opt.sub("--", '').to_sym
+        @mode = modes.include?(tmp) ? tmp : nil
+    end
+
+    option("--clean", "-c") do
+        @mode = :destroy
+    end
+
+    option("--all", "-a") do
+        @all = true
+    end
+
+    option("--debug", "-d") do |arg|
+        Puppet::Util::Log.level = :debug
+    end
+
+    Puppet::SSL::CertificateAuthority::Interface::INTERFACE_METHODS.reject {|m| m == :destroy }.each do |method|
+        option("--#{method}", "-%s" % method.to_s[0,1] ) do
+            find_mode("--#{method}")
+        end
+    end
+
+    option("--version","-V")
+
+    option("--verbose", "-v") do
+        Puppet::Util::Log.level = :info
+    end
+
 
     command(:main) do
         if @all
@@ -54,28 +70,5 @@ Puppet::Application.new(:puppetca, puppetca_options) do
             puts detail.to_s
             exit(23)
         end
-    end
-
-    option(:unknown) do |opt, arg|
-        modes = Puppet::SSL::CertificateAuthority::Interface::INTERFACE_METHODS
-        tmp = opt.sub("--", '').to_sym
-        @mode = modes.include?(tmp) ? tmp : nil
-        true
-    end
-
-    option(:clean) do |arg|
-        @mode = :destroy
-    end
-
-    option(:all) do |arg|
-        @all = true
-    end
-
-    option(:verbose) do |arg|
-        Puppet::Util::Log.level = :info
-    end
-
-    option(:debug) do |arg|
-        Puppet::Util::Log.level = :debug
     end
 end

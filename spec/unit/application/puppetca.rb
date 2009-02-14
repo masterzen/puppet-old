@@ -17,8 +17,10 @@ describe "PuppetCA" do
         @puppetca.should respond_to(:main)
     end
 
-    it "should declare a fallback for unknown options" do
-        @puppetca.should respond_to(:handle_unknown)
+    Puppet::SSL::CertificateAuthority::Interface::INTERFACE_METHODS.reject{ |m| m == :destroy }.each do |method|
+        it "should declare option --#{method}" do
+            @puppetca.should respond_to("handle_#{method}".to_sym)
+        end
     end
 
     it "should set log level to info with the --verbose option" do
@@ -45,18 +47,12 @@ describe "PuppetCA" do
         @puppetca.all.should be_true
     end
 
-    Puppet::SSL::CertificateAuthority::Interface::INTERFACE_METHODS.each do |method|
+    Puppet::SSL::CertificateAuthority::Interface::INTERFACE_METHODS.reject { |m| m == :destroy }.each do |method|
         it "should set mode to #{method} with option --#{method}" do
-            @puppetca.handle_unknown("--#{method}", nil)
+            @puppetca.send("handle_#{method}".to_sym, nil)
 
             @puppetca.mode.should == method
         end
-    end
-
-    it "should set mode to nil for an option not in the list of known CertificateAuthority option" do
-        @puppetca.handle_unknown("--dontknowme", nil)
-
-        @puppetca.mode.should be_nil
     end
 
     describe "during setup" do
