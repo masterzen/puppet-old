@@ -13,6 +13,17 @@ describe "Puppet" do
         @puppet.should respond_to(:handle_version)
     end
 
+    [:debug,:execute,:loadclasses,:verbose,:use_nodes,:detailed_exitcodes].each do |option|
+        it "should declare handle_#{option} method" do
+            @puppet.should respond_to("handle_#{option}".to_sym)
+        end
+
+        it "should store argument value when calling handle_#{option}" do
+            @puppet.options.expects(:[]=).with(option, 'arg')
+            @puppet.send("handle_#{option}".to_sym, 'arg')
+        end
+    end
+
     it "should ask Puppet::Application to parse Puppet configuration file" do
         @puppet.should_parse_config?.should be_true
     end

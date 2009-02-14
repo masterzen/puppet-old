@@ -3,21 +3,30 @@ require 'puppet/application'
 require 'puppet/network/handler'
 require 'puppet/network/client'
 
-puppet_options = [
-    [ "--debug",	"-d",			GetoptLong::NO_ARGUMENT ],
-    [ "--help",		"-h",			GetoptLong::NO_ARGUMENT ],
-    [ "--logdest",	"-l",			GetoptLong::REQUIRED_ARGUMENT ],
-    [ "--execute",	"-e",			GetoptLong::REQUIRED_ARGUMENT ],
-    [ "--loadclasses", "-L",		GetoptLong::NO_ARGUMENT ],
-    [ "--verbose",  "-v",			GetoptLong::NO_ARGUMENT ],
-    [ "--use-nodes",    			GetoptLong::NO_ARGUMENT ],
-    [ "--detailed-exitcodes",		GetoptLong::NO_ARGUMENT ],
-    [ "--version",  "-V",           GetoptLong::NO_ARGUMENT ]
-]
-
-Puppet::Application.new(:puppet, puppet_options) do
+Puppet::Application.new(:puppet) do
 
     should_parse_config
+
+    option("--debug","-d")
+    option("--execute EXECUTE","-e")
+    option("--loadclasses","-L")
+    option("--verbose","-v")
+    option("--use-nodes")
+    option("--detailed-exitcodes")
+
+    option("--logdest LOGDEST", "-l") do |arg|
+        begin
+            Puppet::Util::Log.newdestination(arg)
+            options[:logset] = true
+        rescue => detail
+            $stderr.puts detail.to_s
+        end
+    end
+
+    option("--version",  "-V") do |arg|
+        puts "%s" % Puppet.version
+        exit
+    end
 
     dispatch do
         return Puppet[:parseonly] ? :parseonly : :main
@@ -132,20 +141,5 @@ Puppet::Application.new(:puppet, puppet_options) do
         else
             Puppet[:manifest] = ARGV.shift
         end
-    end
-
-
-    option(:logdest) do |arg|
-        begin
-            Puppet::Util::Log.newdestination(arg)
-            options[:logset] = true
-        rescue => detail
-            $stderr.puts detail.to_s
-        end
-    end
-
-    option(:version) do |arg|
-        puts "%s" % Puppet.version
-        exit
     end
 end
