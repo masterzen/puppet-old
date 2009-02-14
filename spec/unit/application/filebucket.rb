@@ -29,6 +29,17 @@ describe "Filebucket" do
         @filebucket.should respond_to(:handle_version)
     end
 
+    [:bucket, :debug, :help, :local, :remote, :verbose].each do |option|
+        it "should declare handle_#{option} method" do
+            @filebucket.should respond_to("handle_#{option}".to_sym)
+        end
+
+        it "should store argument value when calling handle_#{option}" do
+            @filebucket.options.expects(:[]=).with("#{option}".to_sym, 'arg')
+            @filebucket.send("handle_#{option}".to_sym, 'arg')
+        end
+    end
+
     it "should exit after printing the version" do
         @filebucket.stubs(:puts)
 

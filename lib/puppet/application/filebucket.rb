@@ -2,19 +2,20 @@ require 'puppet'
 require 'puppet/application'
 require 'puppet/network/client'
 
-filebucket_options = [
-    [ "--bucket",   "-b",			GetoptLong::REQUIRED_ARGUMENT ],
-    [ "--debug",	"-d",			GetoptLong::NO_ARGUMENT ],
-    [ "--help",		"-h",			GetoptLong::NO_ARGUMENT ],
-    [ "--local",	"-l",			GetoptLong::NO_ARGUMENT ],
-    [ "--remote",	"-r",			GetoptLong::NO_ARGUMENT ],
-    [ "--verbose",  "-v",			GetoptLong::NO_ARGUMENT ],
-    [ "--version",  "-V",           GetoptLong::NO_ARGUMENT ]
-]
-
-Puppet::Application.new(:filebucket, filebucket_options) do
+Puppet::Application.new(:filebucket) do
 
     should_not_parse_config
+
+    option("--version", "-V") do |arg|
+        puts "%s" % Puppet.version
+        exit
+    end
+
+    option("--bucket BUCKET","-b")
+    option("--debug","-d")
+    option("--local","-l")
+    option("--remote","-r")
+    option("--verbose","-v")
 
     dispatch do
         ARGV.shift
@@ -88,8 +89,4 @@ Puppet::Application.new(:filebucket, filebucket_options) do
         end
     end
 
-    option(:version) do |arg|
-        puts "%s" % Puppet.version
-        exit
-    end
 end
