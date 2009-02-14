@@ -173,16 +173,21 @@ class TypeDoc
 
 end
 
-pi_options = [
-    [ "--list", "-l",       GetoptLong::NO_ARGUMENT ],
-    [ "--providers", "-p",  GetoptLong::NO_ARGUMENT ],
-    [ "--short","-s",       GetoptLong::NO_ARGUMENT ],
-    [ "--meta","-m",        GetoptLong::NO_ARGUMENT ],
-]
-
-Puppet::Application.new(:pi, pi_options) do
+Puppet::Application.new(:pi,"#{$0} [options] [type]") do
+    @opt_parser.separator("  Print documentation for puppet types and their parameters")
 
     should_not_parse_config
+
+    option("--short", "-s", "Only list parameters without detail") do |arg|
+        options[:parameters] = false
+    end
+
+    option("--providers","-p", "Describe providers in detail")
+    option("--list", "-l", "List all types")
+    option("--meta","-m", "Include metaparams")
+    option("--help","-h") do |v|
+        puts @opt_parser
+    end
 
     preinit do
         options[:parameters] = true
@@ -200,7 +205,6 @@ Puppet::Application.new(:pi, pi_options) do
 
     setup do
         options[:types] = ARGV.dup
-        puts "options: %s" % options.inspect
         unless options[:list] || options[:types].size > 0
             handle_help(nil)
         end
@@ -209,7 +213,4 @@ Puppet::Application.new(:pi, pi_options) do
         end
     end
 
-    option(:parameters) do |arg|
-        options[:parameters] = false
-    end
 end

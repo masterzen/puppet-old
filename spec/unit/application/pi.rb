@@ -17,13 +17,21 @@ describe "pi" do
         @pi.should respond_to(:main)
     end
 
-    it "should declare a parameters option" do
-        @pi.should respond_to(:handle_parameters)
-    end
-
     it "should declare a preinit block" do
         @pi.should respond_to(:run_preinit)
     end
+
+    [:providers,:list,:meta].each do |option|
+        it "should declare handle_#{option} method" do
+            @pi.should respond_to("handle_#{option}".to_sym)
+        end
+
+        it "should store argument value when calling handle_#{option}" do
+            @pi.options.expects(:[]=).with("#{option}".to_sym, 'arg')
+            @pi.send("handle_#{option}".to_sym, 'arg')
+        end
+    end
+
 
     describe "in preinit" do
         it "should set options[:parameteers] to true" do
@@ -34,8 +42,8 @@ describe "pi" do
     end
 
     describe "when handling parameters" do
-        it "should set options[:parameteers] to false" do
-            @pi.handle_parameters(nil)
+        it "should set options[:parameters] to false" do
+            @pi.handle_short(nil)
 
             @pi.options[:parameters].should be_false
         end
