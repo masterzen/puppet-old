@@ -54,6 +54,17 @@ describe "PuppetMaster" do
 
     end
 
+    [:debug,:verbose].each do |option|
+        it "should declare handle_#{option} method" do
+            @puppetmasterd.should respond_to("handle_#{option}".to_sym)
+        end
+
+        it "should store argument value when calling handle_#{option}" do
+            @puppetmasterd.options.expects(:[]=).with(option, 'arg')
+            @puppetmasterd.send("handle_#{option}".to_sym, 'arg')
+        end
+    end
+
     describe "when applying options" do
         it "should exit after printing the version" do
             @puppetmasterd.stubs(:puts)

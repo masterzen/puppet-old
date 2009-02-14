@@ -3,17 +3,40 @@ require 'puppet/application'
 require 'puppet/daemon'
 require 'puppet/network/server'
 
-puppetmasterd_options = [
-    [ "--debug",    "-d",   GetoptLong::NO_ARGUMENT ],
-    [ "--help",     "-h",   GetoptLong::NO_ARGUMENT ],
-    [ "--logdest",  "-l",   GetoptLong::REQUIRED_ARGUMENT ],
-    [ "--verbose",  "-v",   GetoptLong::NO_ARGUMENT ],
-    [ "--version",  "-V",   GetoptLong::NO_ARGUMENT ]
-]
-
-Puppet::Application.new(:puppetmasterd, puppetmasterd_options) do
+Puppet::Application.new(:puppetmasterd) do
 
     should_parse_config
+
+    option("--debug", "-d")
+    option("--verbose", "-v")
+
+    option("--logdest",  "-l") do |arg|
+        begin
+            Puppet::Util::Log.newdestination(arg)
+            options[:setdest] = true
+        rescue => detail
+            if Puppet[:debug]
+                puts detail.backtrace
+            end
+            $stderr.puts detail.to_s
+        end
+    end
+
+    option("--version",  "-V") do |arg|
+        puts "%s" % Puppet.version
+        exit
+    end
+
+    preinit do
+        trap(:INT) do
+            $stderr.puts "Cancelling startup"
+            exit(0)
+        end
+
+        # Create this first-off, so we have ARGV
+        @daemon = Puppet::Daemon.new
+        @daemon.argv = ARGV.dup
+    end
 
     dispatch do
         return Puppet[:parseonly] ? :parseonly : :main
@@ -111,33 +134,5 @@ Puppet::Application.new(:puppetmasterd, puppetmasterd_options) do
         else
             Puppet::SSL::Host.ca_location = :none
         end
-    end
-
-    preinit do
-        trap(:INT) do
-            $stderr.puts "Cancelling startup"
-            exit(0)
-        end
-
-        # Create this first-off, so we have ARGV
-        @daemon = Puppet::Daemon.new
-        @daemon.argv = ARGV.dup
-    end
-
-    option(:logdest) do |arg|
-        begin
-            Puppet::Util::Log.newdestination(arg)
-            options[:setdest] = true
-        rescue => detail
-            if Puppet[:debug]
-                puts detail.backtrace
-            end
-            $stderr.puts detail.to_s
-        end
-    end
-
-    option(:version) do |arg|
-        puts "%s" % Puppet.version
-        exit
     end
 end
