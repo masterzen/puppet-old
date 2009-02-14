@@ -4,22 +4,10 @@ require 'puppet/util/reference'
 require 'puppet/network/handler'
 require 'puppet/util/rdoc'
 
-puppetdoc_options = [
-    [ "--all",          "-a",   GetoptLong::NO_ARGUMENT ],
-    [ "--list",         "-l",   GetoptLong::NO_ARGUMENT ],
-    [ "--format",       "-f",   GetoptLong::REQUIRED_ARGUMENT ],
-    [ "--mode",         "-m",   GetoptLong::REQUIRED_ARGUMENT ],
-    [ "--reference",    "-r",   GetoptLong::REQUIRED_ARGUMENT ],
-    [ "--help",         "-h",   GetoptLong::NO_ARGUMENT ],
-    [ "--outputdir",    "-o",   GetoptLong::REQUIRED_ARGUMENT ],
-    [ "--verbose",      "-v",   GetoptLong::NO_ARGUMENT ],
-    [ "--debug",        "-d",   GetoptLong::NO_ARGUMENT ]
-]
-
 $tab = "    "
 Reference = Puppet::Util::Reference
 
-Puppet::Application.new(:puppetdoc, puppetdoc_options) do
+Puppet::Application.new(:puppetdoc) do
 
     should_not_parse_config
 
@@ -33,7 +21,12 @@ Puppet::Application.new(:puppetdoc, puppetdoc_options) do
         @manifest = false
     end
 
-    option(:format) do |arg|
+    option("--all","-a")
+    option("--outputdir OUTPUTDIR","-o")
+    option("--verbose","-v")
+    option("--debug","-d")
+
+    option("--format FORMAT", "-f") do |arg|
         method = "to_%s" % arg
         if Reference.method_defined?(method)
             options[:format] = method
@@ -42,7 +35,7 @@ Puppet::Application.new(:puppetdoc, puppetdoc_options) do
         end
     end
 
-    option(:mode) do |arg|
+    option("--mode MODE", "-m") do |arg|
         if Reference.modes.include?(arg) or arg.intern==:rdoc
             options[:mode] = arg.intern
         else
@@ -50,16 +43,16 @@ Puppet::Application.new(:puppetdoc, puppetdoc_options) do
         end
     end
 
-    option(:list) do |arg|
+    option("--list", "-l") do |arg|
         puts Reference.references.collect { |r| Reference.reference(r).doc }.join("\n")
         exit(0)
     end
 
-    option(:reference) do |arg|
+    option("--reference REFERENCE", "-r") do |arg|
         options[:references] << arg.intern
     end
 
-    option(:unknown) do |opt, arg|
+    unknown do |opt, arg|
         @unknown_args << {:opt => opt, :arg => arg }
         true
     end

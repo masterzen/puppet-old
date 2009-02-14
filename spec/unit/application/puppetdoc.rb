@@ -56,6 +56,17 @@ describe "puppetdoc" do
     end
 
     describe "when handling options" do
+        [:all, :outputdir, :verbose, :debug].each do |option|
+            it "should declare handle_#{option} method" do
+                @puppetdoc.should respond_to("handle_#{option}".to_sym)
+            end
+
+            it "should store argument value when calling handle_#{option}" do
+                @puppetdoc.options.expects(:[]=).with(option, 'arg')
+                @puppetdoc.send("handle_#{option}".to_sym, 'arg')
+            end
+        end
+
         it "should store the format if valid" do
             Puppet::Util::Reference.stubs(:method_defined?).with('to_format').returns(true)
 
