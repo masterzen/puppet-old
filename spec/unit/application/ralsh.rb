@@ -48,6 +48,18 @@ describe "ralsh" do
     end
 
     describe "when handling options" do
+
+        [:debug, :verbose, :edit].each do |option|
+            it "should declare handle_#{option} method" do
+                @ralsh.should respond_to("handle_#{option}".to_sym)
+            end
+
+            it "should store argument value when calling handle_#{option}" do
+                @ralsh.options.expects(:[]=).with(option, 'arg')
+                @ralsh.send("handle_#{option}".to_sym, 'arg')
+            end
+        end
+
         it "should set options[:host] to given host" do
             @ralsh.handle_host(:whatever)
 

@@ -1,17 +1,7 @@
 require 'puppet'
 require 'puppet/application'
 
-ralsh_options = [
-    [ "--debug",	"-d",   GetoptLong::NO_ARGUMENT ],
-    [ "--verbose",  "-v",   GetoptLong::NO_ARGUMENT ],
-    [ "--types",    "-t",   GetoptLong::NO_ARGUMENT ],
-    [ "--param",    "-p",   GetoptLong::REQUIRED_ARGUMENT ],
-    [ "--host",     "-H",   GetoptLong::REQUIRED_ARGUMENT ],
-    [ "--edit",     "-e",   GetoptLong::NO_ARGUMENT ],
-    [ "--help",     "-h",   GetoptLong::NO_ARGUMENT ]
-]
-
-Puppet::Application.new(:ralsh, ralsh_options) do
+Puppet::Application.new(:ralsh) do
 
     should_not_parse_config
 
@@ -22,11 +12,15 @@ Puppet::Application.new(:ralsh, ralsh_options) do
         @host = nil
     end
 
-    option(:host) do |arg|
+    option("--debug","-d")
+    option("--verbose","-v")
+    option("--edit","-e")
+
+    option("--host HOST","-H") do |arg|
         @host = arg
     end
 
-    option(:types) do |arg|
+    option("--types", "-t") do |arg|
         types = []
         Puppet::Type.loadall
         Puppet::Type.eachtype do |t|
@@ -37,7 +31,7 @@ Puppet::Application.new(:ralsh, ralsh_options) do
         exit
     end
 
-    option(:param) do |arg|
+    option("--param PARAM", "-p") do |arg|
         @extra_params << arg.to_sym
     end
 
@@ -169,5 +163,4 @@ Puppet::Application.new(:ralsh, ralsh_options) do
             Puppet::Util::Log.level = :info
         end
     end
-
 end
