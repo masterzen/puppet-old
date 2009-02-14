@@ -74,6 +74,18 @@ describe "puppetd" do
     end
 
     describe "when handling options" do
+
+        [:centrallogging, :disable, :enable, :debug, :fqdn, :test, :verbose].each do |option|
+            it "should declare handle_#{option} method" do
+                @puppetd.should respond_to("handle_#{option}".to_sym)
+            end
+
+            it "should store argument value when calling handle_#{option}" do
+                @puppetd.options.expects(:[]=).with(option, 'arg')
+                @puppetd.send("handle_#{option}".to_sym, 'arg')
+            end
+        end
+
         it "should set an existing handler on server" do
             Puppet::Network::Handler.stubs(:handler).with("handler").returns(true)
 

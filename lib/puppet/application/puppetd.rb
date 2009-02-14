@@ -5,24 +5,7 @@ require 'puppet/daemon'
 require 'puppet/configurer'
 require 'puppet/network/client'
 
-puppetd_options = [
-    [ "--centrallogging",           GetoptLong::NO_ARGUMENT ],
-    [ "--disable",                  GetoptLong::NO_ARGUMENT ],
-    [ "--debug",            "-d",   GetoptLong::NO_ARGUMENT ],
-    [ "--enable",                   GetoptLong::NO_ARGUMENT ],
-    [ "--fqdn",             "-f",   GetoptLong::REQUIRED_ARGUMENT ],
-    [ "--help",             "-h",   GetoptLong::NO_ARGUMENT ],
-    [ "--logdest",          "-l",   GetoptLong::REQUIRED_ARGUMENT ],
-    [ "--onetime",          "-o",   GetoptLong::NO_ARGUMENT ],
-    [ "--test",             "-t",   GetoptLong::NO_ARGUMENT ],
-    [ "--serve",            "-s",   GetoptLong::REQUIRED_ARGUMENT ],
-    [ "--no-client",                GetoptLong::NO_ARGUMENT ],
-    [ "--verbose",          "-v",   GetoptLong::NO_ARGUMENT ],
-    [ "--version",          "-V",   GetoptLong::NO_ARGUMENT ],
-    [ "--waitforcert",      "-w",   GetoptLong::REQUIRED_ARGUMENT ]
-]
-
-Puppet::Application.new(:puppetd, puppetd_options) do
+Puppet::Application.new(:puppetd) do
 
     should_parse_config
 
@@ -57,7 +40,15 @@ Puppet::Application.new(:puppetd, puppetd_options) do
         @daemon.argv = ARGV.dup
     end
 
-    option(:serve) do |arg|
+    option("--centrallogging")
+    option("--disable")
+    option("--enable")
+    option("--debug","-d")
+    option("--fqdn FQDN","-f")
+    option("--test","-t")
+    option("--verbose","-v")
+
+    option("--serve HANDLER", "-s") do |arg|
         if Puppet::Network::Handler.handler(arg)
             options[:serve] << arg.to_sym
         else
@@ -65,21 +56,21 @@ Puppet::Application.new(:puppetd, puppetd_options) do
         end
     end
 
-    option(:version) do |arg|
+    option("--version", "-V") do |arg|
         puts "%s" % Puppet.version
         exit
     end
 
-    option(:no_client) do |arg|
+    option("--no-client") do |arg|
         options[:client] = false
     end
 
-    option(:onetime) do |arg|
+    option("--onetime", "-o") do |arg|
         options[:onetime] = true
         options[:waitforcert] = 0 unless @explicit_waitforcert
     end
 
-    option(:logdest) do |arg|
+    option("--logdest", "-l") do |arg|
         begin
             Puppet::Util::Log.newdestination(arg)
             options[:setdest] = true
@@ -91,12 +82,12 @@ Puppet::Application.new(:puppetd, puppetd_options) do
         end
     end
 
-    option(:waitforcert) do |arg|
+    option("--waitforcert WAITFORCERT", "-w") do |arg|
         options[:waitforcert] = arg.to_i
         @explicit_waitforcert = true
     end
 
-    option(:port) do |arg|
+    option("--port PORT","-p") do |arg|
         @args[:Port] = arg
     end
 
@@ -266,5 +257,4 @@ Puppet::Application.new(:puppetd, puppetd_options) do
             end
         end
     end
-
 end
