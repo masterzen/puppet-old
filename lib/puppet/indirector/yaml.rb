@@ -43,6 +43,10 @@ class Puppet::Indirector::Yaml < Puppet::Indirector::Terminus
         end
     end
 
+    def destroy(request)
+        File.unlink(path(request.key))
+    end
+
     # Get the yaml directory
     def base
         (Puppet[:name] == "puppetmasterd") ? Puppet[:yamldir] : Puppet[:clientyamldir]

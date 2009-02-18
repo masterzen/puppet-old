@@ -142,4 +142,16 @@ describe Puppet::Indirector::Yaml, " when choosing file location" do
         @store.search(@request).should == []
       end
     end
+
+    describe Puppet::Indirector::Yaml, " when destroying" do
+        it "should unlink the right yaml file" do
+            @request = stub 'request', :key => "one*", :instance => @subject
+            @one = mock 'one'
+            @store.stubs(:base).returns "/my/yaml/dir"
+
+            File.expects(:unlink).with(File.join("/my/yaml/dir", @store.class.indirection_name.to_s, @request.key + ".yaml"))
+
+            @store.destroy(@request)
+        end
+    end
 end
