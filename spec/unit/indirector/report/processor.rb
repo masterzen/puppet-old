@@ -15,6 +15,10 @@ describe Puppet::Transaction::Report::Processor do
     it "should provide a method for saving reports" do
         Puppet::Transaction::Report::Processor.new.should respond_to(:save)
     end
+
+    it "should provide a method for cleaning reports" do
+        Puppet::Transaction::Report::Processor.new.should respond_to(:destroy)
+    end
 end
 
 describe Puppet::Transaction::Report::Processor, " when saving a report" do
@@ -38,6 +42,24 @@ describe Puppet::Transaction::Report::Processor, " when saving a report" do
     end
 end
 
+describe Puppet::Transaction::Report::Processor, " when destroying a node reports" do
+    before do
+        Puppet.settings.stubs(:use)
+        @reporter = Puppet::Transaction::Report::Processor.new
+        @reporter.stubs(:process)
+    end
+
+    it "should create a dummy report" do
+        dummy = stub 'report'
+        request = stub 'request', :key => 'host'
+
+        Puppet::Transaction::Report.expects(:new).returns(dummy)
+        dummy.expects(:host=).with('host')
+
+        @reporter.destroy(request)
+    end
+end
+
 describe Puppet::Transaction::Report::Processor, " when processing a report" do
     before do
         Puppet.settings.stubs(:value).with(:reports).returns("one")
@@ -47,10 +69,11 @@ describe Puppet::Transaction::Report::Processor, " when processing a report" do
         @report_type = mock 'one'
         @dup_report = mock 'dupe report'
         @dup_report.stubs(:process)
+        @dup_report.stubs(:destroy)
         @report = mock 'report'
         @report.expects(:dup).returns(@dup_report)
 
-        @request = stub 'request', :instance => @report
+        @request = stub 'request', :instance => @report, :key => 'host'
 
         Puppet::Reports.expects(:report).with("one").returns(@report_type)
 
@@ -68,9 +91,17 @@ describe Puppet::Transaction::Report::Processor, " when processing a report" do
         @reporter.save(@request)
     end
 
-    it "should call the report type's :process method" do
+    it "should call the report type's :process method when saving" do
         @dup_report.expects(:process)
         @reporter.save(@request)
+    end
+
+    it "should call the report type's :destroy method when destroying" do
+        Puppet::Transaction::Report.stubs(:new).returns(@report)
+        @report.stubs(:host=).with('host')
+
+        @dup_report.expects(:destroy)
+        @reporter.destroy(@request)
     end
 
     it "should not raise exceptions" do

@@ -101,6 +101,10 @@ class TestReports < Test::Unit::TestCase
 
         assert(FileTest.exists?(file), "report file did not get created")
         assert_equal(yaml, File.read(file), "File did not get written")
+
+        # test report destroying
+        report.destroy
+        assert(!FileTest.exists?(file), "report file still exist after destroy")
     end
 
     if Puppet.features.rrd?

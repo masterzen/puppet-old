@@ -9,5 +9,8 @@ Puppet::Reports.register_report(:log) do
             Puppet::Util::Log.newmessage(log)
         end
     end
+
+    def destroy
+    end
 end
 

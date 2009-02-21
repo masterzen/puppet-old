@@ -183,5 +183,8 @@ Puppet::Reports.register_report(:tagmail) do
         end
         @sync
     end
+
+    def destroy
+    end
 end
 

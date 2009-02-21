@@ -134,5 +134,8 @@ Puppet::Reports.register_report(:rrdgraph) do
     def timeclean(metric)
         metric.values = metric.values.find_all { |name, label, value| [:total, :config_retrieval].include?(name) }
     end
+
+    def destroy
+    end
 end
 

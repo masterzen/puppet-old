@@ -14,12 +14,18 @@ class Puppet::Transaction::Report::Processor < Puppet::Indirector::Code
         process(request.instance)
     end
 
+    def destroy(request)
+        dummy = Puppet::Transaction::Report.new
+        dummy.host = request.key
+        process(dummy, :destroy)
+    end
+
     private
 
     # Process the report with each of the configured report types.
     # LAK:NOTE This isn't necessarily the best design, but it's backward
     # compatible and that's good enough for now.
-    def process(report)
+    def process(report, method = :process)
         return if Puppet[:reports] == "none"
 
         reports().each do |name|
@@ -29,7 +35,7 @@ class Puppet::Transaction::Report::Processor < Puppet::Indirector::Code
                 newrep = report.dup
                 begin
                     newrep.extend(mod)
-                    newrep.process
+                    newrep.send(method)
                 rescue => detail
                     if Puppet[:trace]
                         puts detail.backtrace
