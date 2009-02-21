@@ -306,7 +306,9 @@ class Puppet::Util::Settings
             searchpath.each do |source|
                 next if source == :name
                 @sync.synchronize do
-                    @name = @values[source][:name]
+                    if @name = @values[source][:name]
+                        @name = @name.to_sym
+                    end
                 end
                 break if @name
             end

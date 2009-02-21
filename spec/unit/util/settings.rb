@@ -235,6 +235,17 @@ describe Puppet::Util::Settings do
             @settings[:one].should == "nameval"
         end
 
+        it "should return values set in the specific section before values set in the main section when name has changed" do
+            text = "[main]\none = mainval\n[myname]\none = nameval\n[newname]\none = newnameval\n"
+            @settings.stubs(:read_file).returns(text)
+            @settings.parse
+
+            @settings[:name] = "newname"
+
+            @settings[:one].should == "newnameval"
+        end
+
+
         it "should not return values outside of its search path" do
             text = "[other]\none = oval\n"
             file = "/some/file"
