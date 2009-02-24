@@ -22,9 +22,9 @@ class Puppet::Rails::Schema
                 # Thanks, mysql!  MySQL requires a length on indexes in text fields.
                 # So, we provide them for mysql and handle everything else specially.
                 if Puppet[:dbadapter] == "mysql"
-                    execute "CREATE INDEX typentitle ON resources (restype,title(50));"
+                    execute "CREATE UNIQUE INDEX typentitle ON resources (title(255),restype,host_id);"
                 else
-                    add_index :resources, [:title, :restype]
+                    add_index :resources, [:title, :restype, :host_id]. :unique => true
                 end
 
                 create_table :source_files do |t| 
