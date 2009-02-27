@@ -76,6 +76,23 @@ module Puppet::Rails
         end
     end
 
+    # Close our database connection in the hope of GC the rails cache
+    def self.deinit
+        unless Puppet.features.rails?
+            raise Puppet::DevError, "No activerecord, cannot deinit Puppet::Rails"
+        end
+
+        begin
+            ActiveRecord::Base.clear_active_connections!
+            ActiveRecord::Base.clear_reloadable_connections!
+        rescue => detail
+            if Puppet[:trace]
+                puts detail.backtrace
+            end
+            raise Puppet::Error, "Could not disconnect from database: %s" % detail
+        end
+    end
+
     # Migrate to the latest db schema.
     def self.migrate
         dbdir = nil

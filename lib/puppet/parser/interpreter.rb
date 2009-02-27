@@ -30,6 +30,10 @@ class Puppet::Parser::Interpreter
         rescue => detail
           puts detail.backtrace if Puppet[:trace]
           raise Puppet::Error, detail.to_s + " on node %s" % node.name
+        ensure
+            if Puppet[:storeconfigs] and Puppet.features.rails?
+                Puppet::Rails.deinit
+            end
         end
     end
 
