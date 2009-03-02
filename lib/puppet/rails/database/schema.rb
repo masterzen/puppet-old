@@ -22,9 +22,9 @@ class Puppet::Rails::Schema
                 # Thanks, mysql!  MySQL requires a length on indexes in text fields.
                 # So, we provide them for mysql and handle everything else specially.
                 if Puppet[:dbadapter] == "mysql"
-                    execute "CREATE INDEX typentitle ON resources (restype,title(50));"
+                    execute "CREATE INDEX typentitle ON resources (title(50),restype,host_id);"
                 else
-                    add_index :resources, [:title, :restype]
+                    add_index :resources, [:title, :restype, :host_id]. :unique => true
                 end
 
                 create_table :source_files do |t| 
@@ -43,6 +43,7 @@ class Puppet::Rails::Schema
                 end
                 add_index :resource_tags, :resource_id, :integer => true
                 add_index :resource_tags, :puppet_tag_id, :integer => true
+                add_index :resource_tags, [:resource_id, :puppet_tag_id], :unique => true
 
                 create_table :puppet_tags do |t| 
                     t.column :name, :string
@@ -50,6 +51,7 @@ class Puppet::Rails::Schema
                     t.column :created_at, :datetime
                 end
                 add_index :puppet_tags, :id, :integer => true
+                add_index :puppet_tags, :name, :unique => true
 
                 create_table :hosts do |t|
                     t.column :name, :string, :null => false
@@ -64,14 +66,14 @@ class Puppet::Rails::Schema
                     t.column :created_at, :datetime
                 end
                 add_index :hosts, :source_file_id, :integer => true
-                add_index :hosts, :name
+                add_index :hosts, :name, :unique => true
 
                 create_table :fact_names do |t| 
                     t.column :name, :string, :null => false
                     t.column :updated_at, :datetime
                     t.column :created_at, :datetime
                 end
-                add_index :fact_names, :name
+                add_index :fact_names, :name, :unique => true
 
                 create_table :fact_values do |t| 
                     t.column :value, :text, :null => false
@@ -93,13 +95,14 @@ class Puppet::Rails::Schema
                 end
                 add_index :param_values, :param_name_id, :integer => true
                 add_index :param_values, :resource_id, :integer => true
-         
+                add_index :param_values, [ :param_name_id, :resource_id ], :unique => true
+
                 create_table :param_names do |t| 
                     t.column :name, :string, :null => false
                     t.column :updated_at, :datetime
                     t.column :created_at, :datetime
                 end
-                add_index :param_names, :name
+                add_index :param_names, :name, :unique => true
             end 
         end
     ensure
