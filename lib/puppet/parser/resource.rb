@@ -154,7 +154,7 @@ class Puppet::Parser::Resource
     def merge(resource)
         # Test the resource scope, to make sure the resource is even allowed
         # to override.
-        unless self.source.object_id == resource.source.object_id || resource.source.child_of?(self.source)
+        unless self.source.object_id == resource.source.object_id || resource.source == :override_must_succeed || resource.source.child_of?(self.source)
             raise Puppet::ParseError.new("Only subclasses can override parameters", resource.line, resource.file)
         end
         # Some of these might fail, but they'll fail in the way we want.

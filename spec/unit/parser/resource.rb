@@ -286,6 +286,12 @@ describe Puppet::Parser::Resource do
             lambda { @resource.merge(@override) }.should raise_error(Puppet::ParseError)
         end
 
+        it "should not fail when the override was created with the magic constant source" do
+            @override.source = :override_must_succeed
+
+            lambda { @resource.merge(@override) }.should_not raise_error(Puppet::ParseError)
+        end
+
         it "should succeed when the override was created in the current scope" do
             @resource.source = "source3"
             @override.source = @resource.source

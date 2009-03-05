@@ -84,7 +84,7 @@ class Puppet::Parser::Collector
                     :params => overrides[:params],
                     :file => overrides[:file],
                     :line => overrides[:line],
-                    :source => overrides[:source],
+                    :source => :override_must_succeed,
                     :scope => overrides[:scope]
                 )
 

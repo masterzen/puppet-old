@@ -190,6 +190,21 @@ describe Puppet::Parser::Collector, "when collecting virtual and catalog resourc
         @collector.evaluate
     end
 
+    it "should create a resource with overriden parameters whose source is a magic constant" do
+        one = stub_everything 'one', :type => "Mytype", :virtual? => true, :title => "test"
+        param = stub 'param'
+        @compiler.stubs(:add_override)
+
+        @compiler.expects(:resources).returns([one])
+
+        @collector.add_override(:params => param )
+        Puppet::Parser::Resource.expects(:new).with { |h|
+            h[:source] == :override_must_succeed
+        }
+
+        @collector.evaluate
+    end
+
     it "should not override already overriden resources for this same collection in a previous run" do
         one = stub_everything 'one', :type => "Mytype", :virtual? => true, :title => "test"
         param = stub 'param'
