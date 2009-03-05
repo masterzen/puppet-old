@@ -1,10 +1,12 @@
 # An object that collects stored objects from the central cache and returns
 # them to the current host, yo.
 class Puppet::Parser::Collector
-    attr_accessor :type, :scope, :vquery, :equery, :form, :resources
+    attr_accessor :type, :scope, :vquery, :equery, :form, :resources, :collected
 
     # Call the collection method, mark all of the returned objects as non-virtual,
-    # and then delete this object from the list of collections to evaluate.
+    # The collector can also delete himself from the compiler if there is no more 
+    # resources to collect (valid only for resource fixed-set collector
+    # which get their resources from +collect_resources+ and not from the catalog)
     def evaluate
         # Shortcut if we're not using storeconfigs and they're trying to collect
         # exported resources.
@@ -12,10 +14,9 @@ class Puppet::Parser::Collector
             Puppet.warning "Not collecting exported resources without storeconfigs"
             return false
         end
+
         if self.resources
-            if objects = collect_resources and ! objects.empty?
-                return objects
-            else
+            unless objects = collect_resources and ! objects.empty?
                 return false
             end
         else
@@ -25,14 +26,28 @@ class Puppet::Parser::Collector
             end
             if objects.empty?
                 return false
-            else
-                return objects
             end
         end
+
+        # filter out object that already have been collected by ourself
+        # which can happen if we are called several times and we collect catalog
+        # resources
+        objects.reject! { |o| @collected.include?(o.ref) }
+
+        return false if objects.empty?
+
+        # keep an eye on the resources we have collected
+        objects.inject(@collected) { |c,o| c[o.ref]=o; c }
+
+        # return our newly collected resources
+        objects
     end
 
     def initialize(scope, type, equery, vquery, form)
         @scope = scope
+
+        # initialisation
+        @collected = {}
 
         # Canonize the type
         @type = Puppet::Resource::Reference.new(type, "whatever").type
@@ -132,13 +147,8 @@ class Puppet::Parser::Collector
 
     # Collect just virtual objects, from our local compiler.
     def collect_virtual(exported = false)
-        if exported
-            method = :exported?
-        else
-            method = :virtual?
-        end
         scope.compiler.resources.find_all do |resource|
-            resource.type == @type and resource.send(method) and match?(resource)
+            resource.type == @type and (exported ? resource.exported? : true) and match?(resource)
         end
     end
 

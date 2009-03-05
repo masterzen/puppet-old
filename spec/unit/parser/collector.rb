@@ -59,8 +59,9 @@ describe Puppet::Parser::Collector, "when collecting specific virtual resources"
 
     it "should mark matched resources as non-virtual" do
         @collector.resources = ["File[virtual1]", "File[virtual2]"]
-        one = mock 'one'
+        one = stub_everything 'one'
         one.expects(:virtual=).with(false)
+
         @scope.stubs(:findresource).with("File[virtual1]").returns(one)
         @scope.stubs(:findresource).with("File[virtual2]").returns(nil)
         @collector.evaluate
@@ -68,8 +69,7 @@ describe Puppet::Parser::Collector, "when collecting specific virtual resources"
 
     it "should return matched resources" do
         @collector.resources = ["File[virtual1]", "File[virtual2]"]
-        one = mock 'one'
-        one.stubs(:virtual=)
+        one = stub_everything 'one'
         @scope.stubs(:findresource).with("File[virtual1]").returns(one)
         @scope.stubs(:findresource).with("File[virtual2]").returns(nil)
         @collector.evaluate.should == [one]
@@ -77,8 +77,7 @@ describe Puppet::Parser::Collector, "when collecting specific virtual resources"
 
     it "should delete itself from the compile's collection list if it has found all of its resources" do
         @collector.resources = ["File[virtual1]"]
-        one = mock 'one'
-        one.stubs(:virtual=)
+        one = stub_everything 'one'
         @compiler.expects(:delete_collection).with(@collector)
         @scope.expects(:compiler).returns(@compiler)
         @scope.stubs(:findresource).with("File[virtual1]").returns(one)
@@ -87,15 +86,14 @@ describe Puppet::Parser::Collector, "when collecting specific virtual resources"
 
     it "should not delete itself from the compile's collection list if it has unfound resources" do
         @collector.resources = ["File[virtual1]"]
-        one = mock 'one'
-        one.stubs(:virtual=)
+        one = stub_everything 'one'
         @compiler.expects(:delete_collection).never
         @scope.stubs(:findresource).with("File[virtual1]").returns(nil)
         @collector.evaluate
     end
 end
 
-describe Puppet::Parser::Collector, "when collecting virtual resources" do
+describe Puppet::Parser::Collector, "when collecting virtual and catalog resources" do
     before do
         @scope = mock 'scope'
         @compiler = mock 'compile'
@@ -106,12 +104,18 @@ describe Puppet::Parser::Collector, "when collecting virtual resources" do
         @collector = Puppet::Parser::Collector.new(@scope, @resource_type, nil, @vquery, :virtual)
     end
 
-    it "should find all resources matching the vquery" do
-        one = stub 'one', :type => "Mytype", :virtual? => true
-        two = stub 'two', :type => "Mytype", :virtual? => true
+    it "should find all virtual resources matching the vquery" do
+        one = stub_everything 'one', :type => "Mytype", :virtual? => true
+        two = stub_everything 'two', :type => "Mytype", :virtual? => true
 
-        one.stubs(:virtual=)
-        two.stubs(:virtual=)
+        @compiler.expects(:resources).returns([one, two])
+
+        @collector.evaluate.should == [one, two]
+    end
+
+    it "should find all non-virtual resources matching the vquery" do
+        one = stub_everything 'one', :type => "Mytype", :virtual? => false
+        two = stub_everything 'two', :type => "Mytype", :virtual? => false
 
         @compiler.expects(:resources).returns([one, two])
 
@@ -119,7 +123,7 @@ describe Puppet::Parser::Collector, "when collecting virtual resources" do
     end
 
     it "should mark all matched resources as non-virtual" do
-        one = stub 'one', :type => "Mytype", :virtual? => true
+        one = stub_everything 'one', :type => "Mytype", :virtual? => true
 
         one.expects(:virtual=).with(false)
 
@@ -129,11 +133,8 @@ describe Puppet::Parser::Collector, "when collecting virtual resources" do
     end
 
     it "should return matched resources" do
-        one = stub 'one', :type => "Mytype", :virtual? => true
-        two = stub 'two', :type => "Mytype", :virtual? => true
-
-        one.stubs(:virtual=)
-        two.stubs(:virtual=)
+        one = stub_everything 'one', :type => "Mytype", :virtual? => true
+        two = stub_everything 'two', :type => "Mytype", :virtual? => true
 
         @compiler.expects(:resources).returns([one, two])
 
@@ -141,8 +142,8 @@ describe Puppet::Parser::Collector, "when collecting virtual resources" do
     end
 
     it "should return all resources of the correct type if there is no virtual query" do
-        one = stub 'one', :type => "Mytype", :virtual? => true
-        two = stub 'two', :type => "Mytype", :virtual? => true
+        one = stub_everything 'one', :type => "Mytype", :virtual? => true
+        two = stub_everything 'two', :type => "Mytype", :virtual? => true
 
         one.expects(:virtual=).with(false)
         two.expects(:virtual=).with(false)
@@ -155,8 +156,8 @@ describe Puppet::Parser::Collector, "when collecting virtual resources" do
     end
 
     it "should not return or mark resources of a different type" do
-        one = stub 'one', :type => "Mytype", :virtual? => true
-        two = stub 'two', :type => :other, :virtual? => true
+        one = stub_everything 'one', :type => "Mytype", :virtual? => true
+        two = stub_everything 'two', :type => :other, :virtual? => true
 
         one.expects(:virtual=).with(false)
         two.expects(:virtual=).never
@@ -166,14 +167,11 @@ describe Puppet::Parser::Collector, "when collecting virtual resources" do
         @collector.evaluate.should == [one]
     end
 
-    it "should not return or mark non-virtual resources" do
-        one = stub 'one', :type => "Mytype", :virtual? => false
-        two = stub 'two', :type => :other, :virtual? => false
+    it "should not return resources that were collected in a previous run of this collector" do
+        one = stub_everything 'one', :type => "Mytype", :virtual? => true, :title => "test"
+        @compiler.stubs(:resources).returns([one])
 
-        one.expects(:virtual=).never
-        two.expects(:virtual=).never
-
-        @compiler.expects(:resources).returns([one, two])
+        @collector.evaluate
 
         @collector.evaluate.should be_false
     end
@@ -181,8 +179,8 @@ describe Puppet::Parser::Collector, "when collecting virtual resources" do
     it "should not return or mark non-matching resources" do
         @collector.vquery = proc { |res| res.name == :one }
 
-        one = stub 'one', :name => :one, :type => "Mytype", :virtual? => true
-        two = stub 'two', :name => :two, :type => "Mytype", :virtual? => true
+        one = stub_everything 'one', :name => :one, :type => "Mytype", :virtual? => true
+        two = stub_everything 'two', :name => :two, :type => "Mytype", :virtual? => true
 
         one.expects(:virtual=).with(false)
         two.expects(:virtual=).never
@@ -237,8 +235,8 @@ describe Puppet::Parser::Collector, "when collecting exported resources" do
     it "should return all matching resources from the current compile and mark them non-virtual and non-exported" do
         stub_rails(true)
 
-        one = stub 'one', :type => "Mytype", :virtual? => true, :exported? => true
-        two = stub 'two', :type => "Mytype", :virtual? => true, :exported? => true
+        one = stub 'one', :type => "Mytype", :virtual? => true, :exported? => true, :ref => "one"
+        two = stub 'two', :type => "Mytype", :virtual? => true, :exported? => true, :ref => "two"
 
         one.stubs(:exported=)
         one.stubs(:virtual=)
@@ -253,7 +251,7 @@ describe Puppet::Parser::Collector, "when collecting exported resources" do
     it "should mark all returned resources as not virtual" do
         stub_rails(true)
 
-        one = stub 'one', :type => "Mytype", :virtual? => true, :exported? => true
+        one = stub 'one', :type => "Mytype", :virtual? => true, :exported? => true, :ref => "one"
 
         one.stubs(:exported=)
         one.expects(:virtual=).with(false)
@@ -267,13 +265,14 @@ describe Puppet::Parser::Collector, "when collecting exported resources" do
         stub_rails()
         Puppet::Rails::Host.stubs(:find_by_name).returns(nil)
 
-        one = stub 'one', :restype => "Mytype", :title => "one", :virtual? => true, :exported? => true
+        one = stub 'one', :restype => "Mytype", :title => "one", :virtual? => true, :exported? => true, :ref => "one"
         Puppet::Rails::Resource.stubs(:find).returns([one])
 
         resource = mock 'resource'
         one.expects(:to_resource).with(@scope).returns(resource)
         resource.stubs(:exported=)
         resource.stubs(:virtual=)
+        resource.stubs(:ref)
 
         @compiler.stubs(:resources).returns([])
         @scope.stubs(:findresource).returns(nil)
@@ -287,13 +286,14 @@ describe Puppet::Parser::Collector, "when collecting exported resources" do
         stub_rails()
         Puppet::Rails::Host.stubs(:find_by_name).returns(nil)
 
-        one = stub 'one', :restype => "Mytype", :title => "one", :virtual? => true, :exported? => true
+        one = stub 'one', :restype => "Mytype", :title => "one", :virtual? => true, :exported? => true, :ref => "one"
         Puppet::Rails::Resource.stubs(:find).returns([one])
 
         resource = mock 'resource'
         one.expects(:to_resource).with(@scope).returns(resource)
         resource.stubs(:exported=)
         resource.stubs(:virtual=)
+        resource.stubs(:ref)
 
         @compiler.stubs(:resources).returns([])
         @scope.stubs(:findresource).returns(nil)
@@ -308,13 +308,14 @@ describe Puppet::Parser::Collector, "when collecting exported resources" do
         stub_rails()
         Puppet::Rails::Host.stubs(:find_by_name).returns(nil)
 
-        one = stub 'one', :restype => "Mytype", :title => "one", :virtual? => true, :exported? => true
+        one = stub 'one', :restype => "Mytype", :title => "one", :virtual? => true, :exported? => true, :ref => "one"
         Puppet::Rails::Resource.stubs(:find).returns([one])
 
         resource = mock 'resource'
         one.expects(:to_resource).with(@scope).returns(resource)
         resource.expects(:exported=).with(false)
         resource.stubs(:virtual=)
+        resource.stubs(:ref)
 
         @compiler.stubs(:resources).returns([])
         @scope.stubs(:findresource).returns(nil)
