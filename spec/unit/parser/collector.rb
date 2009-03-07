@@ -39,6 +39,14 @@ describe Puppet::Parser::Collector, "when initializing" do
         @collector = Puppet::Parser::Collector.new(@scope, "resource::type", @equery, @vquery, @form)
         @collector.type.should == "Resource::Type"
     end
+
+    it "should accept an optional resource override" do
+        @collector = Puppet::Parser::Collector.new(@scope, "resource::type", @equery, @vquery, @form)
+        override = { :params => "whatever" }
+        @collector.add_override(override)
+        @collector.overrides.should equal(override)
+    end
+
 end
 
 describe Puppet::Parser::Collector, "when collecting specific virtual resources" do
@@ -167,6 +175,38 @@ describe Puppet::Parser::Collector, "when collecting virtual and catalog resourc
         @collector.evaluate.should == [one]
     end
 
+    it "should create a resource with overriden parameters" do
+        one = stub_everything 'one', :type => "Mytype", :virtual? => true, :title => "test"
+        param = stub 'param'
+        @compiler.stubs(:add_override)
+
+        @compiler.expects(:resources).returns([one])
+
+        @collector.add_override(:params => param )
+        Puppet::Parser::Resource.expects(:new).with { |h|
+            h[:params] == param
+        }
+
+        @collector.evaluate
+    end
+
+    it "should not override already overriden resources for this same collection in a previous run" do
+        one = stub_everything 'one', :type => "Mytype", :virtual? => true, :title => "test"
+        param = stub 'param'
+        @compiler.stubs(:add_override)
+
+        @compiler.expects(:resources).at_least(2).returns([one])
+
+        @collector.add_override(:params => param )
+        Puppet::Parser::Resource.expects(:new).once.with { |h|
+            h[:params] == param
+        }
+
+        @collector.evaluate
+
+        @collector.evaluate
+    end
+
     it "should not return resources that were collected in a previous run of this collector" do
         one = stub_everything 'one', :type => "Mytype", :virtual? => true, :title => "test"
         @compiler.stubs(:resources).returns([one])
@@ -174,6 +214,21 @@ describe Puppet::Parser::Collector, "when collecting virtual and catalog resourc
         @collector.evaluate
 
         @collector.evaluate.should be_false
+    end
+
+
+    it "should tell the compiler about the overriden resources" do
+        one = stub_everything 'one', :type => "Mytype", :virtual? => true, :title => "test"
+        param = stub 'param'
+
+        one.expects(:virtual=).with(false)
+        @compiler.expects(:resources).returns([one])
+        @collector.add_override(:params => param )
+        Puppet::Parser::Resource.stubs(:new).returns("whatever")
+
+        @compiler.expects(:add_override).with("whatever")
+
+        @collector.evaluate
     end
 
     it "should not return or mark non-matching resources" do
@@ -280,6 +335,35 @@ describe Puppet::Parser::Collector, "when collecting exported resources" do
         @compiler.stubs(:add_resource)
 
         @collector.evaluate.should == [resource]
+    end
+
+    it "should override all exported collected resources if collector has an override" do
+        stub_rails()
+        Puppet::Rails::Host.stubs(:find_by_name).returns(nil)
+
+        one = stub 'one', :restype => "Mytype", :title => "one", :virtual? => true, :exported? => true, :ref => "one"
+        Puppet::Rails::Resource.stubs(:find).returns([one])
+
+        resource = mock 'resource'
+        one.expects(:to_resource).with(@scope).returns(resource)
+        resource.stubs(:exported=)
+        resource.stubs(:virtual=)
+        resource.stubs(:ref)
+        resource.stubs(:title)
+
+        @compiler.stubs(:resources).returns([])
+        @scope.stubs(:findresource).returns(nil)
+
+        param = stub 'param'
+        @compiler.stubs(:add_override)
+        @compiler.stubs(:add_resource)
+
+        @collector.add_override(:params => param )
+        Puppet::Parser::Resource.expects(:new).once.with { |h|
+            h[:params] == param
+        }
+
+        @collector.evaluate
     end
 
     it "should store converted resources in the compile's resource list" do

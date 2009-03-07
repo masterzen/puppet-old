@@ -7,6 +7,7 @@ require 'puppet/parser/collector'
 class Puppet::Parser::AST
 class Collection < AST::Branch
     attr_accessor :type, :query, :form
+    attr_reader :override
 
     associates_doc
 
@@ -22,7 +23,37 @@ class Collection < AST::Branch
 
         scope.compiler.add_collection(newcoll)
 
+        add_override(newcoll, scope) if @override
+
         newcoll
     end
+
+    # Handle our parameter ourselves
+    def override=(override)
+        if override.is_a?(AST::ASTArray)
+            @override = override
+        else
+            @override = AST::ASTArray.new(
+                :line => override.line,
+                :file => override.file,
+                :children => [override]
+            )
+        end
+    end
+
+    def add_override(collection, scope)
+        params = @override.collect do |param|
+            param.safeevaluate(scope)
+        end
+
+        collection.add_override(
+            :params => params,
+            :file => @file,
+            :line => @line,
+            :source => scope.source,
+            :scope => scope
+        )
+    end
+
 end
 end

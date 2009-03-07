@@ -1,9 +1,10 @@
 # An object that collects stored objects from the central cache and returns
 # them to the current host, yo.
 class Puppet::Parser::Collector
-    attr_accessor :type, :scope, :vquery, :equery, :form, :resources, :collected
+    attr_accessor :type, :scope, :vquery, :equery, :form, :resources, :collected, :overrides
 
     # Call the collection method, mark all of the returned objects as non-virtual,
+    # and optionnaly apply overrides on them.
     # The collector can also delete himself from the compiler if there is no more 
     # resources to collect (valid only for resource fixed-set collector
     # which get their resources from +collect_resources+ and not from the catalog)
@@ -28,6 +29,8 @@ class Puppet::Parser::Collector
                 return false
             end
         end
+
+        apply_overrides(objects) if @overrides
 
         # filter out object that already have been collected by ourself
         # which can happen if we are called several times and we collect catalog
@@ -58,7 +61,37 @@ class Puppet::Parser::Collector
         @form = form
     end
 
+    # add a resource override to the soon to be exported/realized resources
+    def add_override(hash)
+        unless hash[:params]
+            raise ArgumentError, "Exported resource try to override without parameters"
+        end
+
+        # schedule an override for an upcoming collection
+        @overrides = hash
+    end
+
     private
+
+    def apply_overrides(objects)
+        # tell the compiler we have some override for him unless we already
+        # collected those resources
+        objects.each do |res|
+            unless @collected.include?(res.ref)
+                res = Puppet::Parser::Resource.new(
+                    :type => res.type,
+                    :title => res.title,
+                    :params => overrides[:params],
+                    :file => overrides[:file],
+                    :line => overrides[:line],
+                    :source => overrides[:source],
+                    :scope => overrides[:scope]
+                )
+
+                scope.compiler.add_override(res)
+            end
+        end
+    end
 
     # Create our active record query.
     def build_active_record_query
