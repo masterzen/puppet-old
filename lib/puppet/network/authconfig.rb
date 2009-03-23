@@ -44,7 +44,7 @@ module Puppet
         end
 
         def initialize(file = nil, parsenow = true)
-            @file ||= Puppet[:authconfig]
+            @file = file || Puppet[:authconfig]
 
             unless @file
                 raise Puppet::DevError, "No authconfig file defined"
@@ -101,15 +101,21 @@ module Puppet
                         case line
                         when /^\s*#/; next # skip comments
                         when /^\s*$/; next # skip blank lines
-                        when /\[([\w.]+)\]/ # "namespace" or "namespace.method"
+                        when /^(?:\[([\w.]+)\]|(path)\s+([^ ]+))$/ # "namespace" or "namespace.method"
                             name = $1
+                            type = :name
+                            if $2 == "path"
+                                name = $3
+                                type = :path
+                            end
+                            name.chomp!
                             if newrights.include?(name)
                                 raise FileServerError, "%s is already set at %s" %
                                     [newrights[name], name]
                             end
-                            newrights.newright(name)
+                            newrights.newright(name, :type => type)
                             right = newrights[name]
-                        when /^\s*(\w+)\s+(.+)$/
+                        when /^\s*(allow|deny|method)\s+(.+)$/
                             var = $1
                             value = $2
                             case var
@@ -120,7 +126,7 @@ module Puppet
                                         right.allow(val)
                                     rescue AuthStoreError => detail
                                         raise ConfigurationError, "%s at line %s of %s" %
-                                            [detail.to_s, count, @config]
+                                            [detail.to_s, count, @file]
                                     end
                                 }
                             when "deny"
@@ -130,7 +136,20 @@ module Puppet
                                         right.deny(val)
                                     rescue AuthStoreError => detail
                                         raise ConfigurationError, "%s at line %s of %s" %
-                                            [detail.to_s, count, @config]
+                                            [detail.to_s, count, @file]
+                                    end
+                                }
+                            when "method"
+                                unless right.path?
+                                    raise ConfigurationError, "method directive not allowed in namespace ACL at line %s of %s" % [count, @config]
+                                end
+                                value.split(/\s*,\s*/).each { |val|
+                                    begin
+                                        right.info "allowing method %s access" % val
+                                        right.method(val)
+                                    rescue AuthStoreError => detail
+                                        raise ConfigurationError, "%s at line %s of %s" %
+                                            [detail.to_s, count, @file]
                                     end
                                 }
                             else
