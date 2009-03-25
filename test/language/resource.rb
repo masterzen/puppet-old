@@ -91,12 +91,12 @@ class TestResource < PuppetTest::TestCase
         scope = mkscope
         scope.stubs(:tags).returns([])
         refs = []
-        4.times { |i| refs << Puppet::Parser::Resource::Reference.new(:title => "file%s" % i, :type => "file") }
+        6.times { |i| refs << Puppet::Parser::Resource::Reference.new(:title => "file%s" % i, :type => "file") }
         res = Parser::Resource.new :type => "file", :title => "/tmp",
             :source => source, :scope => scope,
             :params => paramify(source, :owner => "nobody", :group => %w{you me},
             :require => refs[0], :ignore => %w{svn},
-            :subscribe => [refs[1], refs[2]], :notify => [refs[3]])
+            :subscribe => [refs[1], refs[2]], :notify => [refs[3]], :before => [refs[3], [refs[4], refs[5]]])
 
         obj = nil
         assert_nothing_raised do
@@ -115,6 +115,7 @@ class TestResource < PuppetTest::TestCase
         assert_equal(["file", refs[0].title], obj["require"], "Resource reference was not passed correctly")
         assert_equal([["file", refs[1].title], ["file", refs[2].title]], obj["subscribe"], "Array of resource references was not passed correctly")
         assert_equal(["file", refs[3].title], obj["notify"], "Array with single resource reference was not turned into single value")
+        assert_equal([ ["file", refs[3].title],["file", refs[4].title] ,["file", refs[5].title] ], obj["before"], "Array with deep resource reference was not turned into flattened array")
     end
 
     # FIXME This isn't a great test, but I need to move on.

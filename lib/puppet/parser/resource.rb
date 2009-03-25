@@ -320,6 +320,10 @@ class Puppet::Parser::Resource
             if v.is_a?(Reference)
                 v = v.to_ref
             elsif v.is_a?(Array)
+                # Flatten arrays of Reference to allow [ Res[a], Res[b,c] ] => [ Res[a], [ Res[b], Res[c] ]]
+                if v.flatten.find { |av| av.is_a?(Reference) }
+                    v = v.flatten
+                end
                 v = v.collect { |av|
                     if av.is_a?(Reference)
                         av = av.to_ref
