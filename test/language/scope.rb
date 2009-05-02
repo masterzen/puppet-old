@@ -442,6 +442,7 @@ Host <<||>>"
                 assert(flat.find{|o| o.name == name }, "Did not find #{name}")
             end
         }
+        Puppet[:storeconfigs] = false
     end
     else
         $stderr.puts "No ActiveRecord -- skipping collection tests"

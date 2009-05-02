@@ -496,6 +496,7 @@ file { "/tmp/yayness":
                 check.call(res, "multiresource")
             end
         end
+        Puppet[:storeconfigs] = false if Puppet.features.rails?
     end
 
     def test_collections
@@ -523,6 +524,7 @@ file { "/tmp/yayness":
             assert_instance_of(AST::Collection, coll)
             assert_equal(form, coll.form)
         end
+        Puppet[:storeconfigs] = false if Puppet.features.rails?
     end
 
     def test_collectionexpressions
