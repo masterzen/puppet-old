@@ -261,6 +261,7 @@ class Puppet::Parser::Resource
                           end
         end
 
+        result.exported = self.exported?
         result.file = self.file
         result.line = self.line
         result.tag(*self.tags)

@@ -387,6 +387,11 @@ describe Puppet::Parser::Resource do
             @parser_resource.to_resource.tags.should == @parser_resource.tags
         end
 
+        it "should copy over the exported status" do
+            @parser_resource.exported = true
+            @parser_resource.to_resource.exported.should be_true
+        end
+
         it "should copy over the line" do
             @parser_resource.line = 40
             @parser_resource.to_resource.line.should == 40
