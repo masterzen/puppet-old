@@ -52,6 +52,34 @@ describe Puppet::Transaction do
             @transaction.generate_additional_resources(generator, :generate).should be_empty
         end
     end
+
+    describe "when skipping a resource" do
+        before :each do
+            @resource = stub_everything 'res'
+            @catalog = Puppet::Resource::Catalog.new
+            @transaction = Puppet::Transaction.new(@catalog)
+        end
+
+        it "should skip resource with missing tags" do
+            @transaction.stubs(:missing_tags?).returns(true)
+            @transaction.skip?(@resource).should be_true
+        end
+
+        it "should skip not scheduled resources" do
+            @transaction.stubs(:scheduled?).returns(false)
+            @transaction.skip?(@resource).should be_true
+        end
+
+        it "should skip resources with failed dependencies" do
+            @transaction.stubs(:failed_dependencies?).returns(false)
+            @transaction.skip?(@resource).should be_true
+        end
+
+        it "should skip exported resource" do
+            @resource.stubs(:exported?).returns true
+            @transaction.skip?(@resource).should be_true
+        end
+    end
 end
 
 describe Puppet::Transaction, " when determining tags" do
