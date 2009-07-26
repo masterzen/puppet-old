@@ -32,13 +32,13 @@ class Puppet::Parser::AST
 
             # Then look for a match in the options.
             @values.each { |obj|
-                param = obj.param.safeevaluate(scope)
-                if ! sensitive && param.respond_to?(:downcase)
-                    param = param.downcase
-                end
-                if param == paramvalue
+                if obj.param.evaluate_match(paramvalue, scope, :file => file, :line => line, :sensitive => sensitive)
                     # we found a matching option
-                    retvalue = obj.value.safeevaluate(scope)
+                    begin
+                        retvalue = obj.value.safeevaluate(scope)
+                    ensure
+                        scope.unset_ephemeral_var
+                    end
                     found = true
                     break
                 elsif obj.param.is_a?(Default)

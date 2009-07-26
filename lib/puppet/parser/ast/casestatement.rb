@@ -21,9 +21,8 @@ class Puppet::Parser::AST
             # Iterate across the options looking for a match.
             default = nil
             @options.each { |option|
-                option.eachvalue(scope) { |opval|
-                    opval = opval.downcase if ! sensitive and opval.respond_to?(:downcase)
-                    if opval == value
+                option.eachopt { |opt|
+                    if opt.evaluate_match(value, scope, :file => file, :line => line, :sensitive => sensitive)
                         found = true
                         break
                     end
@@ -31,7 +30,11 @@ class Puppet::Parser::AST
 
                 if found
                     # we found a matching option
-                    retvalue = option.safeevaluate(scope)
+                    begin
+                        retvalue = option.safeevaluate(scope)
+                    ensure
+                        scope.unset_ephemeral_var
+                    end
                     break
                 end
 
