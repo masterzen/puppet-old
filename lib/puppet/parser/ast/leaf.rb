@@ -90,10 +90,24 @@ class Puppet::Parser::AST
         def initialize(hash)
             super
 
-            unless @value =~ %r{^[0-9a-zA-Z\-]+(\.[0-9a-zA-Z\-]+)*$}
+            @value = @value.to_s.downcase
+            if @value =~ /[^-\w.]/
                 raise Puppet::DevError,
                     "'%s' is not a valid hostname" % @value
             end
+        end
+
+        def to_classname
+            return @value
+        end
+
+        def eql?(value)
+            value = value.value if value.is_a?(HostName)
+            return @value.eql?(value)
+        end
+
+        def hash
+            return @value.hash
         end
     end
 
