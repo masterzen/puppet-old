@@ -2,7 +2,7 @@ require 'puppet'
 require 'puppet/rails/param_name'
 require 'puppet/rails/param_value'
 require 'puppet/rails/puppet_tag'
-require 'puppet/rails/benchmark'
+require 'puppet/util/rails/benchmark'
 require 'puppet/util/rails/collection_merger'
 
 class Puppet::Rails::Resource < ActiveRecord::Base

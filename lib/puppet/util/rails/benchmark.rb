@@ -1,5 +1,5 @@
 require 'benchmark'
-module Puppet::Rails::Benchmark
+module Puppet::Util::Rails::Benchmark
     $benchmarks = {:accumulated => {}}
 
     def time_debug?

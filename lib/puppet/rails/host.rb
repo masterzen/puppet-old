@@ -1,7 +1,7 @@
 require 'puppet/rails/resource'
 require 'puppet/rails/fact_name'
 require 'puppet/rails/source_file'
-require 'puppet/rails/benchmark'
+require 'puppet/util/rails/benchmark'
 require 'puppet/util/rails/collection_merger'
 
 class Puppet::Rails::Host < ActiveRecord::Base
