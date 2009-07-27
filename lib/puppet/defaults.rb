@@ -705,17 +705,25 @@ module Puppet
 
     setdefaults(:puppetmasterd,
         :storeconfigs => {:default => false, :desc => "Whether to store each client's configuration.  This
-            requires ActiveRecord from Ruby on Rails.",
-            :call_on_define => true, # Call our hook with the default value, so we always get the libdir set.
+            requires ActiveRecord from Ruby on Rails."
+        },
+        :storeconfigs_source => { :default => "rails", :desc => "what subsystem to use to for storeconfigs",
+            :call_on_defile => true,
             :hook => proc do |value|
                 require 'puppet/node'
                 require 'puppet/node/facts'
                 require 'puppet/resource/catalog'
-                if value
+                case value
+                when "rails"
                     raise "StoreConfigs not supported without ActiveRecord 2.3" unless Puppet.features.rails?
                     Puppet::Resource::Catalog.cache_class = :active_record unless Puppet.settings[:async_storeconfigs]
                     Puppet::Node::Facts.cache_class = :active_record
                     Puppet::Node.cache_class = :active_record
+                when "tokyo_storage"
+                    raise "StoreConfigs not supported without Tokyo Cabinet" unless Puppet.features.tokyo_storage?
+                    Puppet::Resource::Catalog.cache_class = :tokyo_storage
+                    Puppet::Node::Facts.cache_class = :tokyo_storage
+                    Puppet::Node.cache_class = :tokyo_storage
                 end
             end
         }

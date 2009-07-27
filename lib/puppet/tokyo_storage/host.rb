@@ -5,32 +5,25 @@ class Puppet::TokyoStorage::Host
     include TokyoExecutor
     include TokyoObject
 
+    def self.build_index
+        execute do |tokyo|
+            tokyo.set_index("name", :lexical)
+            tokyo.set_index(:pk, :lexical)
+        end
+    end
+
     def self.to_hash(node)
         { :name => node.name, :ip => node.ipaddress, :environment => node.environment }
     end
 
-    # If the host already exists, get rid of its objects
-    def self.clean(host)
-    end
-
-    def self.find_by_name(conenction, name)
-        class.new(connection.query { |q|
-          q.add_condition 'name', :equals, name
-        })
-    end
-
     def self.from_puppet(node)
-        tokyo = Puppet::TokyoStorage.gethandle
-        begin
-            host = find_by_name(node.name) || class.new(to_hash(node))
+        host = find_by_name(node.name) || self.new(to_hash(node))
 
-            host[:ip] = node.ipaddress
-            host[:environment] = node.environment
+        host[:ip] = node.ipaddress
+        host[:environment] = node.environment
+        id = host[:pk] || get_id
 
-            host
-        ensure
-            Puppet::TokyoStorage.close_handle(connection)
-        end
+        host
     end
 
     def to_puppet
@@ -61,8 +54,12 @@ class Puppet::TokyoStorage::Host
         }
     end
 
+    def resources
+        Puppet::TokyoStorage::Resource.find_by_host(self[:id])
+    end
+
     def find_resources
-        Puppet::TokyoStorage::Resources.find_by_host(self[:id]).inject({}) do | hash, resource |
+        Puppet::TokyoStorage::Resource.find_by_host(self[:id]).inject({}) do | hash, resource |
             hash[resource.id] = resource
             hash
         end
