@@ -2,13 +2,13 @@ require 'puppet'
 require 'puppet/rails/param_name'
 require 'puppet/rails/param_value'
 require 'puppet/rails/puppet_tag'
-require 'puppet/rails/benchmark'
+require 'puppet/util/rails/benchmark'
 require 'puppet/util/rails/collection_merger'
 
 class Puppet::Rails::Resource < ActiveRecord::Base
     include Puppet::Util::CollectionMerger
     include Puppet::Util::ReferenceSerializer
-    include Puppet::Rails::Benchmark
+    include Puppet::Util::Rails::Benchmark
 
     has_many :param_values, :dependent => :destroy, :class_name => "Puppet::Rails::ParamValue"
     has_many :param_names, :through => :param_values, :class_name => "Puppet::Rails::ParamName"
