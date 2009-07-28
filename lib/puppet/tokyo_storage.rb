@@ -7,7 +7,7 @@ require 'rufus/tokyo'
 module Puppet::TokyoStorage
     TIME_DEBUG = true
 
-    def self.gethandle
+    def self.get_connection
         # does the current thread has already a connection?
         unless connection = Thread.current[:tokyo_connection]
             case Puppet[:dbadapter]
@@ -20,7 +20,7 @@ module Puppet::TokyoStorage
         connection
     end
 
-    def self.closehandle(connection)
+    def self.close(connection)
         unless Thread.current[:tokyo_connection] == connection
             raise Puppet::DevError, "Thread is trying to checkin a connection in an empty slot"
         end

@@ -13,10 +13,9 @@ class Puppet::Resource::Catalog::TokyoStorage < Puppet::Indirector::TokyoStorage
 
         catalog = Puppet::Resource::Catalog.new(host.name)
 
-# TODO
-        # host.resources.each do |resource|
-        #     catalog.add_resource resource.to_transportable
-        # end
+        host.resources.each do |resource|
+             catalog.add_resource resource.to_transportable
+        end
 
         catalog
     end

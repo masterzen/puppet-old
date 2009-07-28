@@ -2,11 +2,11 @@ require 'puppet/tokyo_storage'
 
 module Puppet::TokyoStorage::Executor
     def execute
-        connection = Puppet::TokyoStorage.gethandle
+        connection = Puppet::TokyoStorage.get_connection
         begin
-            yield
+            return yield connection
         ensure
-            Puppet::TokyoStorage.closehandle(connection)
+            Puppet::TokyoStorage.close(connection)
         end
     end
 end
