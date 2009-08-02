@@ -1,16 +1,22 @@
-require 'puppet/tokyo_storage/executor'
+require 'puppet/tokyo_storage'
+require 'puppet/tokyo_storage/tokyo_executor'
 require 'puppet/tokyo_storage/tokyo_object'
+require 'puppet/tokyo_storage/resource'
+require 'puppet/tokyo_storage/resource_parameter'
+require 'puppet/tokyo_storage/resource_tag'
+require 'puppet/tokyo_storage/fact'
 
 class Puppet::TokyoStorage::Host
-    include TokyoExecutor
-    include TokyoObject
+    extend Puppet::TokyoStorage::TokyoExecutor
+    include Puppet::TokyoStorage::TokyoExecutor
 
-    def self.build_index
-        execute do |tokyo|
-            tokyo.set_index("name", :lexical)
-            tokyo.set_index(:pk, :lexical)
-        end
-    end
+    extend Puppet::TokyoStorage::TokyoObject::ClassMethods
+    include Puppet::TokyoStorage::TokyoObject
+
+    include Puppet::Util::Rails::Benchmark
+    extend Puppet::Util::Rails::Benchmark
+    include Puppet::Util
+    include Puppet::Util::CollectionMerger
 
     def self.to_hash(node)
         { :name => node.name, :ip => node.ipaddress, :environment => node.environment }
@@ -21,7 +27,6 @@ class Puppet::TokyoStorage::Host
 
         host[:ip] = node.ipaddress
         host[:environment] = node.environment
-        id = host[:pk] || get_id
 
         host
     end
@@ -29,7 +34,7 @@ class Puppet::TokyoStorage::Host
     def to_puppet
         node = Puppet::Node.new(self.name)
         values.each do |n,v|
-            node.send(n+"=", v)
+            node.send(n+"=", v) unless n == :pk
         end
 
         node
@@ -55,11 +60,11 @@ class Puppet::TokyoStorage::Host
     end
 
     def resources
-        Puppet::TokyoStorage::Resource.find_by_host(self[:id])
+        Puppet::TokyoStorage::Resource.find_by_host(id)
     end
 
     def find_resources
-        Puppet::TokyoStorage::Resource.find_by_host(self[:id]).inject({}) do | hash, resource |
+        Puppet::TokyoStorage::Resource.find_by_host(id).inject({}) do | hash, resource |
             hash[resource.id] = resource
             hash
         end
@@ -94,47 +99,139 @@ class Puppet::TokyoStorage::Host
 
         debug_benchmark("Resource addition") {
             additions.each do |resource|
-                build_rails_resource_from_parser_resource(resource)
+                build_tokyo_resource_from_parser_resource(resource)
             end
 
             log_accumulated_marks "Added resources"
         }
     end
 
-    def add_new_resources(additions)
-        additions.each do |resource|
-            Puppet::TokyoStorage::Resource.from_parser_resource(self, resource)
+    def remove_unneeded_resources(compiled, existing)
+        deletions = []
+        resources = {}
+        existing.each do |id, resource|
+            # it seems that it can happen (see bug #2010) some resources are duplicated in the
+            # database (ie logically corrupted database), in which case we remove the extraneous
+            # entries.
+            if resources.include?(resource.ref)
+                deletions << id
+                next
+            end
+
+            # If the resource is in the db but not in the catalog, mark it
+            # for removal.
+            unless compiled.include?(resource.ref)
+                deletions << id
+                next
+            end
+
+            resources[resource.ref] = resource
         end
+        # We need to use 'destroy' here, not 'delete', so that all
+        # dependent objects get removed, too.
+        Puppet::TokyoStorage::Resource.destroy(deletions) unless deletions.empty?
+
+        return resources
+    end
+
+    def perform_resource_merger(compiled, resources)
+        return compiled.values if resources.empty?
+
+        # Now for all resources in the catalog but not in the db, we're pretty easy.
+        additions = []
+        compiled.each do |ref, resource|
+            if db_resource = resources[ref]
+                db_resource.merge_parser_resource(resource)
+            else
+                additions << resource
+            end
+        end
+        log_accumulated_marks "Resource merger"
+
+        return additions
     end
 
     # Turn a parser resource into a Rails resource.
-    def build_rails_resource_from_parser_resource(resource)
+    def build_tokyo_resource_from_parser_resource(resource)
         db_resource = nil
         accumulate_benchmark("Added resources", :initialization) {
-            args = Puppet::TokyoStorage::Resource.resource_initial_args(resource)
+            args = Puppet::TokyoStorage::Resource.resource_initial_args(id, resource)
 
-            db_resource = self.resources.build(args)
-
-            # Our file= method does the name to id conversion.
-            db_resource.file = resource.file
+            db_resource = Puppet::TokyoStorage::Resource.create(args)
         }
 
 
         accumulate_benchmark("Added resources", :parameters) {
             resource.each do |param, value|
-                Puppet::Rails::ParamValue.from_parser_param(param, value).each do |value_hash|
-                    db_resource.param_values.build(value_hash)
+                Puppet::TokyoStorage::ResourceParameter.from_parser_param(param, value).each do |value_hash|
+                    Puppet::TokyoStorage::ResourceParameter.create(value_hash.merge(:host_id => self.id, :resource_id => db_resource[:pk]))
                 end
             end
         }
 
         accumulate_benchmark("Added resources", :tags) {
-            resource.tags.each { |tag| db_resource.add_resource_tag(tag) }
+            resource.tags.each { |tag| Puppet::TokyoStorage::Resource.add_resource_tag(self.id, db_resource[:pk], tag) }
         }
 
         db_resource.save
 
         return db_resource
+    end
+
+    def find_resources_parameters(resources)
+        params = Puppet::TokyoStorage::ResourceParameter.find_by_host(self.id)
+
+        # assign each loaded parameters/tags to the resource it belongs to
+        params.each do |param|
+            resources[param['resource_id']].add_param_to_hash(param) if resources.include?(param['resource_id'])
+        end
+    end
+
+    def find_resources_tags(resources)
+        tags = Puppet::TokyoStorage::ResourceTag.find_by_host(self.id)
+
+        tags.each do |tag|
+            resources[tag['resource_id']].add_tag_to_hash(tag) if resources.include?(tag['resource_id'])
+        end
+    end
+
+    # This is *very* similar to the merge_parameters method
+    # of Puppet::TokyoStorage::Resource.
+    def merge_facts(facts)
+        db_facts = {}
+
+        deletions = []
+        Puppet::TokyoStorage::Fact.find_by_host(id).each do |value|
+            deletions << value['id'] and next unless facts.include?(value['name'])
+            # Now store them for later testing.
+            db_facts[value['name']] ||= []
+            db_facts[value['name']] << value
+        end
+
+        # Now get rid of any parameters whose value list is different.
+        # This might be extra work in cases where an array has added or lost
+        # a single value, but in the most common case (a single value has changed)
+        # this makes sense.
+        db_facts.each do |name, value_hashes|
+            values = value_hashes.collect { |v| v['value'] }
+
+            unless values == facts[name]
+                value_hashes.each { |v| deletions << v['id'] }
+            end
+        end
+
+        # Perform our deletions.
+        Puppet::TokyoStorage::Fact.destroy(deletions) unless deletions.empty?
+
+        # Lastly, add any new parameters.
+        facts.each do |name, value|
+            next if db_facts.include?(name)
+            values = value.is_a?(Array) ? value : [value]
+
+            values.each do |v|
+                Puppet::TokyoStorage::Fact.create(:value => v, :name => name, :host_id => self.id)
+            end
+        end
     end
 
 end

@@ -5,9 +5,14 @@ Puppet.features.rubygems?
 Puppet.features.add(:tokyo_storage) do
     begin
         require 'rufus/tokyo'
-    rescue LoadError => detail
+    rescue
+        require 'rubygems'
+        require 'rufus/tokyo'
     end
 
-    return true if defined? ::Rufus::Tokyo::Cabinet
-    return false
+    if defined? Rufus::Tokyo::VERSION
+        true
+    else
+        false
+    end
 end

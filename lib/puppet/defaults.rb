@@ -627,6 +627,20 @@ module Puppet
             and other environments normally use ``debug``."]
     )
 
+    self.setdefaults(:tokyo_storage,
+        :tklocation => { :default => "$statedir/clientconfigs.tct",
+            :mode => 0660,
+            :owner => "$user",
+            :group => "$group",
+            :desc => "The Tokyo Cabinet file for client configurations (should end with .tct)"
+        },
+        :tkoption => [ "", "The Tokyo Cabinet options" ],
+        :tkserver => [ "localhost", "The Tokyo Tyrant database server for Client caching. Only
+            used when networked databases are used."],
+        :tkport => [ "1234", "The Tokyo Tyrant database port"],
+        :tkadapter => [ "cabinet", "The type of database to use (either cabinet or tyrant)." ]
+    )
+
     setdefaults(:transaction,
         :tags => ["", "Tags to use to find resources.  If this is set, then
             only resources tagged with the specified tags will be applied.
@@ -708,19 +722,22 @@ module Puppet
             requires ActiveRecord from Ruby on Rails."
         },
         :storeconfigs_source => { :default => "rails", :desc => "what subsystem to use to for storeconfigs",
-            :call_on_defile => true,
+            :call_on_define => true,
             :hook => proc do |value|
-                require 'puppet/node'
-                require 'puppet/node/facts'
-                require 'puppet/resource/catalog'
                 case value
                 when "rails"
                     raise "StoreConfigs not supported without ActiveRecord 2.3" unless Puppet.features.rails?
+                    require 'puppet/node'
+                    require 'puppet/node/facts'
+                    require 'puppet/resource/catalog'
                     Puppet::Resource::Catalog.cache_class = :active_record unless Puppet.settings[:async_storeconfigs]
                     Puppet::Node::Facts.cache_class = :active_record
                     Puppet::Node.cache_class = :active_record
                 when "tokyo_storage"
                     raise "StoreConfigs not supported without Tokyo Cabinet" unless Puppet.features.tokyo_storage?
+                    require 'puppet/node'
+                    require 'puppet/node/facts'
+                    require 'puppet/resource/catalog'
                     Puppet::Resource::Catalog.cache_class = :tokyo_storage
                     Puppet::Node::Facts.cache_class = :tokyo_storage
                     Puppet::Node.cache_class = :tokyo_storage

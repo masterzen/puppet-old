@@ -8,7 +8,7 @@ class Puppet::Node::Facts::TokyoStorage < Puppet::Indirector::TokyoStorage
     def find(request)
         return nil unless host = ar_model.find_by_name(request.key)
 
-        facts = Puppet::Node::Facts.new(host.name)
+        facts = Puppet::Node::Facts.new(host[:name])
         facts.values = host.get_facts.inject({}) do |hash, ary|
             # Convert all single-member arrays into plain values.
             param = ary[0]

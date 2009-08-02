@@ -1,4 +1,4 @@
-require 'puppet/tokyostorage/host'
+require 'puppet/tokyo_storage/host'
 require 'puppet/indirector/tokyo_storage'
 require 'puppet/resource/catalog'
 

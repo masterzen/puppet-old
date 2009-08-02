@@ -1,8 +1,7 @@
-# Load the appropriate libraries, or set a class indicating they aren't available
-
-require 'facter'
 require 'puppet'
 require 'rufus/tokyo'
+require 'rufus/tokyo/cabinet/table'
+require 'rufus/tokyo/tyrant'
 
 module Puppet::TokyoStorage
     TIME_DEBUG = true
@@ -10,31 +9,60 @@ module Puppet::TokyoStorage
     def self.get_connection
         # does the current thread has already a connection?
         unless connection = Thread.current[:tokyo_connection]
-            case Puppet[:dbadapter]
+            case Puppet[:tkadapter]
             when "cabinet"
-                connection = Rufus::Tokyo::Cabinet.new(Puppet[:dblocation] + Puppet[:dboption])
+                raise ArgumentError, "Tokyo Cabinet filename must end with \".tct\"" unless Puppet[:tklocation] =~ /\.tct$/
+                unless FileTest.exists?(Puppet[:tklocation])
+                    Rufus::Tokyo::Table.new(Puppet[:tklocation]+"#mode=wc" + Puppet[:tkoption]).close
+                end
+                connection = Rufus::Tokyo::Table.new(Puppet[:tklocation]+"#mode=r" + Puppet[:tkoption])
             when "tyrant"
-                connection = Rufus::Tokyo::Tyrant.new(Puppet[:dbserver], Puppet[:dbport])
+                connection = Rufus::Tokyo::Tyrant.new(Puppet[:tkserver], Puppet[:tkport])
             end
+            Thread.current[:tokyo_connection] = connection
         end
+        puts "getting r conne: %s" % connection
+        connection
+    end
+
+    def self.get_write_connection
+        # does the current thread has already a connection?
+        unless connection = Thread.current[:tokyo_connection]
+            case Puppet[:tkadapter]
+            when "cabinet"
+                raise ArgumentError, "Tokyo Cabinet filename must end with \".tct\"" unless Puppet[:tklocation] =~ /\.tct$/
+                connection = Rufus::Tokyo::Table.new(Puppet[:tklocation]+"#mode=wc" + Puppet[:tkoption] )
+            when "tyrant"
+                connection = Rufus::Tokyo::Tyrant.new(Puppet[:tkserver], Puppet[:tkport])
+            end
+            Thread.current[:tokyo_connection] = connection
+        end
+        puts "getting w conne: %s" % connection
         connection
     end
 
     def self.close(connection)
-        unless Thread.current[:tokyo_connection] == connection
+        puts "putting conne: %s" % connection
+        if Thread.current[:tokyo_connection].nil?
             raise Puppet::DevError, "Thread is trying to checkin a connection in an empty slot"
         end
         Thread.current[:tokyo_connection] = nil
         connection.close
     end
 
-    # Set up our database connection.  It'd be nice to have a "use" system
-    # that could make callbacks.
     def self.init
         unless Puppet.features.tokyo_storage?
             raise Puppet::DevError, "No Tokyo Cabinet or Tokyo Tyrant, cannot init Puppet::TokyoStorage"
         end
 
-        connect()
+        Puppet.settings.use(:main, :tokyo_storage, :puppetmasterd)
+
+        require 'puppet/tokyo_storage/index'
+        Puppet::TokyoStorage::Index.build
     end
 end
+
+if Puppet.features.tokyo_storage?
+    require 'puppet/tokyo_storage/host'
+end
+
