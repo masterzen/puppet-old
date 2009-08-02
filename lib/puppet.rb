@@ -173,11 +173,6 @@ require 'puppet/util/storage'
 require 'puppet/parser/interpreter'
 
 if Puppet[:storeconfigs]
-    case Puppet[:storeconfigs_source]
-    when "rails"
-        require 'puppet/rails'
-    when "tokyo_storage"
-        require 'puppet/tokyo_storage'
-    end
+    require 'puppet/storeconfigs'
 end
 
