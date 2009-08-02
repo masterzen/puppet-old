@@ -1,4 +1,6 @@
 require 'benchmark'
+require 'puppet/util/rails'
+
 module Puppet::Util::Rails::Benchmark
     $benchmarks = {:accumulated => {}}
 

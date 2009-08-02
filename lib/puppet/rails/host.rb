@@ -5,8 +5,8 @@ require 'puppet/util/rails/benchmark'
 require 'puppet/util/rails/collection_merger'
 
 class Puppet::Rails::Host < ActiveRecord::Base
-    include Puppet::Rails::Benchmark
-    extend Puppet::Rails::Benchmark
+    include Puppet::Util::Rails::Benchmark
+    extend Puppet::Util::Rails::Benchmark
     include Puppet::Util
     include Puppet::Util::CollectionMerger
 
