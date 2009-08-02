@@ -8,7 +8,7 @@ class Puppet::TokyoStorage::ResourceTag
     extend Puppet::TokyoStorage::TokyoObject::ClassMethods
 
     def self.prefix
-        "tag_"
+        "tag"
     end
 
 end

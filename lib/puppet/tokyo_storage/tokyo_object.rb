@@ -53,14 +53,14 @@ module Puppet::TokyoStorage::TokyoObject
         end
 
         def find_by_name(name)
+            puts "find_by_name: %s -> %s" % [name, prefix]
             execute do |tokyo|
                 hash = tokyo.query do |q|
                     q.add_condition 'name', :equals, name
-                    q.add_condition :pk, :starts_with, prefix
+                    q.add_condition '', :starts_with, prefix
                 end
-                puts "hash: %s" % hash.inspect
+                puts "found: %s" % hash.inspect
                 return self.new(hash.shift) if hash.size > 0
-                puts "nil"
                 return nil
             end
         end
@@ -69,25 +69,30 @@ module Puppet::TokyoStorage::TokyoObject
             execute do |tokyo|
                 tokyo.query do |q|
                     q.add_condition 'host_id', :equals, id
-                    q.add_condition :pk, :starts_with, prefix
+                    q.add_condition '', :starts_with, prefix
+                end.collect do |o|
+                    self.new(o)
                 end
             end
         end
 
         def destroy(objects)
+            puts "obj: %s" % objects.inspect
             write do |tokyo|
                 objects.each do |o|
-                    tokyo.query_delete do |q|
-                        q.add_condition 'pk', :equals, o.id
-                    end
+                    puts "o: %s" % o.inspect
+                    tokyo.delete o.id
                 end
             end
         end
 
         def create(hash)
+            a = nil
             write do |tokyo|
-                tokyo[gen_pk_from_id(tokyo.generate_unique_id)] = hash.reject { |n,v| n == :pk }
+                a = gen_pk_from_id(tokyo.generate_unique_id)
+                tokyo[a] = hash.reject { |n,v| n == :pk }
             end
+            return self.new(hash.merge( :pk => a ))
         end
     end
 

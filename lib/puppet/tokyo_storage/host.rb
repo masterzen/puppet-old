@@ -164,13 +164,13 @@ class Puppet::TokyoStorage::Host
         accumulate_benchmark("Added resources", :parameters) {
             resource.each do |param, value|
                 Puppet::TokyoStorage::ResourceParameter.from_parser_param(param, value).each do |value_hash|
-                    Puppet::TokyoStorage::ResourceParameter.create(value_hash.merge(:host_id => self.id, :resource_id => db_resource[:pk]))
+                    Puppet::TokyoStorage::ResourceParameter.create(value_hash.merge(:host_id => self.id, :resource_id => db_resource.id))
                 end
             end
         }
 
         accumulate_benchmark("Added resources", :tags) {
-            resource.tags.each { |tag| Puppet::TokyoStorage::Resource.add_resource_tag(self.id, db_resource[:pk], tag) }
+            resource.tags.each { |tag| Puppet::TokyoStorage::Resource.add_resource_tag(self.id, db_resource.id, tag) }
         }
 
         db_resource.save

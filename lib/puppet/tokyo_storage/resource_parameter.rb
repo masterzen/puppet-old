@@ -8,7 +8,7 @@ class Puppet::TokyoStorage::ResourceParameter
     extend Puppet::TokyoStorage::TokyoObject::ClassMethods
 
     def self.prefix
-        "parameter_"
+        "parameter"
     end
 
     # Store a new parameter in a Rails db.

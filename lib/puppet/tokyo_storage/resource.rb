@@ -124,7 +124,7 @@ class Puppet::TokyoStorage::Resource
         end
     end
 
-    def add_resource_tag(host_id, resource_id, tag)
+    def self.add_resource_tag(host_id, resource_id, tag)
         Puppet::TokyoStorage::ResourceTag.create(:tag => tag, :resource_id => resource_id, :host_id => host_id)
     end
 
