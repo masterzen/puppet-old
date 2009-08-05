@@ -1,30 +1,37 @@
+require 'puppet/util'
 require 'puppet/tokyo_storage'
 require 'puppet/tokyo_storage/tokyo_executor'
 
 module Puppet::TokyoStorage::TokyoObject
     include Puppet::TokyoStorage::TokyoExecutor
+    include Puppet::Util
+    include Puppet::Util::ReferenceSerializer
 
     attr_accessor :values
 
     def initialize(hash={})
-        puts "creating: %s with: %s" % [self.class, hash.inspect]
         @values = hash || {}
+
+        @values = @values.inject({}) do |h,v|
+            h[v[0]] = serialize_value(v[1])
+            h
+        end
+
         unless hash.include?(:pk) or hash.include?("pk")
             @values[:pk] = id
         end
     end
 
     def []=(name, value)
-        @values[name] = value
+        @values[name.to_s] = value
     end
 
-    def [](value)
-        puts "[]: %s %s == %s" % [self.class, value, @values[value]]
-        @values[value]
+    def [](name)
+        @values[name.to_s]
     end
 
     def id
-        self[:pk] || self.class.gen_pk
+        @values[:pk] || self.class.gen_pk
     end
 
     def save
@@ -80,16 +87,20 @@ module Puppet::TokyoStorage::TokyoObject
             puts "obj: %s" % objects.inspect
             write do |tokyo|
                 objects.each do |o|
-                    puts "o: %s" % o.inspect
-                    tokyo.delete o.id
+                    tokyo.delete o
                 end
             end
         end
 
         def create(hash)
             a = nil
+            hash = hash.inject({}) do |h,v|
+                h[v[0].to_s] = v[1]
+                h
+            end
             write do |tokyo|
                 a = gen_pk_from_id(tokyo.generate_unique_id)
+                puts "WRITING: %s -> %s" % [a, hash.inspect]
                 tokyo[a] = hash.reject { |n,v| n == :pk }
             end
             return self.new(hash.merge( :pk => a ))

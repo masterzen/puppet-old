@@ -21,7 +21,6 @@ module Puppet::TokyoStorage
             end
             Thread.current[:tokyo_connection] = connection
         end
-        puts "getting r conne: %s" % connection
         connection
     end
 
@@ -37,12 +36,10 @@ module Puppet::TokyoStorage
             end
             Thread.current[:tokyo_connection] = connection
         end
-        puts "getting w conne: %s" % connection
         connection
     end
 
     def self.close(connection)
-        puts "putting conne: %s" % connection
         if Thread.current[:tokyo_connection].nil?
             raise Puppet::DevError, "Thread is trying to checkin a connection in an empty slot"
         end

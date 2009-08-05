@@ -110,10 +110,12 @@ class Puppet::TokyoStorage::Host
         deletions = []
         resources = {}
         existing.each do |id, resource|
+            puts "id: %s resource: %s" % [id,resource.inspect]
             # it seems that it can happen (see bug #2010) some resources are duplicated in the
             # database (ie logically corrupted database), in which case we remove the extraneous
             # entries.
             if resources.include?(resource.ref)
+                puts "-->deleted 1"
                 deletions << id
                 next
             end
@@ -121,6 +123,7 @@ class Puppet::TokyoStorage::Host
             # If the resource is in the db but not in the catalog, mark it
             # for removal.
             unless compiled.include?(resource.ref)
+                puts "-->deleted 2"
                 deletions << id
                 next
             end
@@ -164,6 +167,7 @@ class Puppet::TokyoStorage::Host
         accumulate_benchmark("Added resources", :parameters) {
             resource.each do |param, value|
                 Puppet::TokyoStorage::ResourceParameter.from_parser_param(param, value).each do |value_hash|
+                    puts "values_hash: %s" % value_hash.inspect
                     Puppet::TokyoStorage::ResourceParameter.create(value_hash.merge(:host_id => self.id, :resource_id => db_resource.id))
                 end
             end
@@ -195,6 +199,18 @@ class Puppet::TokyoStorage::Host
         end
     end
 
+    # returns a hash of fact_names.name => [ fact_values ] for this host.
+    # Note that 'fact_values' is actually a list of the value instances, not
+    # just actual values.
+    def get_facts_hash
+        fact_values = Puppet::TokyoStorage::Fact.find_by_host(id)
+        return fact_values.inject({}) do | hash, value |
+            hash[value['name']] ||= []
+            hash[value['name']] << value
+            hash
+        end
+    end
+
     # This is *very* similar to the merge_parameters method
     # of Puppet::TokyoStorage::Resource.
     def merge_facts(facts)
@@ -202,7 +218,7 @@ class Puppet::TokyoStorage::Host
 
         deletions = []
         Puppet::TokyoStorage::Fact.find_by_host(id).each do |value|
-            deletions << value['id'] and next unless facts.include?(value['name'])
+            deletions << value.id and next unless facts.include?(value['name'])
             # Now store them for later testing.
             db_facts[value['name']] ||= []
             db_facts[value['name']] << value
@@ -214,9 +230,10 @@ class Puppet::TokyoStorage::Host
         # this makes sense.
         db_facts.each do |name, value_hashes|
             values = value_hashes.collect { |v| v['value'] }
-
+            values = values.shift if values.size == 1
             unless values == facts[name]
-                value_hashes.each { |v| deletions << v['id'] }
+                puts "NOT MATCHING: %s" % name
+                value_hashes.each { |v| deletions << v.id }
             end
         end
 

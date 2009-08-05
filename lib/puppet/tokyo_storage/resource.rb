@@ -7,6 +7,10 @@ class Puppet::TokyoStorage::Resource
     include Puppet::TokyoStorage::TokyoObject
     extend Puppet::TokyoStorage::TokyoObject::ClassMethods
 
+    include Puppet::Util::CollectionMerger
+    include Puppet::Util::ReferenceSerializer
+    include Puppet::Util::Rails::Benchmark
+
     def add_param_to_hash(param)
         @params_hash ||= []
         @params_hash << param
@@ -23,6 +27,10 @@ class Puppet::TokyoStorage::Resource
 
     def tags_hash=(hash)
         @tags_hash = hash
+    end
+
+    def ref
+        "%s[%s]" % [values["type"].split("::").collect { |s| s.capitalize }.join("::"), values["title"]]
     end
 
     # Determine the basic details on the resource.
@@ -51,7 +59,7 @@ class Puppet::TokyoStorage::Resource
     end
 
     def merge_attributes(resource)
-        args = self.class.resource_initial_args(resource)
+        args = self.class.resource_initial_args(self[:host_id], resource)
         args.each do |param, value|
             unless resource[param] == value
                 self[param] = value
@@ -69,8 +77,11 @@ class Puppet::TokyoStorage::Resource
 
         deletions = []
         @params_hash.each do |value|
+            puts "checking: %s" % value.inspect
             # First remove any parameters our catalog resource doesn't have at all.
-            deletions << value['id'] and next unless catalog_params.include?(value['name'])
+            deletions << value.id and next unless catalog_params.include?(value['name'])
+
+            puts "keeping it %s" % value.inspect
 
             # Now store them for later testing.
             db_params[value['name']] ||= []
@@ -84,8 +95,11 @@ class Puppet::TokyoStorage::Resource
         db_params.each do |name, value_hashes|
             values = value_hashes.collect { |v| v['value'] }
 
+            puts "values read from db: %s" % values.inspect
+
             unless value_compare(catalog_params[name], values)
-                value_hashes.each { |v| deletions << v['id'] }
+                puts "deletion because difference: %s" % value_hashes.inspect
+                value_hashes.each { |v| deletions << v.id }
             end
         end
 
@@ -98,6 +112,7 @@ class Puppet::TokyoStorage::Resource
             values = value.is_a?(Array) ? value : [value]
 
             values.each do |v|
+                puts "writing -> %s" % v.inspect
                 Puppet::TokyoStorage::ResourceParameter.create(
                     :value => serialize_value(v),
                     :line => resource.line,
@@ -114,13 +129,13 @@ class Puppet::TokyoStorage::Resource
         deletions = []
         resource_tags = resource.tags
         @tags_hash.each do |tag|
-            deletions << tag['id'] and next unless resource_tags.include?(tag['name'])
-            in_db << tag['name']
+            deletions << tag[:pk] and next unless resource_tags.include?(tag['tag'])
+            in_db << tag['tag']
         end
         Puppet::TokyoStorage::ResourceTag.destroy(deletions) unless deletions.empty?
 
         (resource_tags - in_db).each do |tag|
-            add_resource_tag(self[:host_id], self.id , tag)
+            self.class.add_resource_tag(self[:host_id], self.id , tag)
         end
     end
 
@@ -130,7 +145,7 @@ class Puppet::TokyoStorage::Resource
 
     def value_compare(v,db_value)
         v = [v] unless v.is_a?(Array)
-
+puts "comparing: %s == %s" % [v.inspect, db_value.inspect]
         v == db_value
     end
 

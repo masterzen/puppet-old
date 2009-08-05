@@ -6,6 +6,8 @@ class Puppet::TokyoStorage::ResourceParameter
     include Puppet::TokyoStorage::TokyoExecutor
     include Puppet::TokyoStorage::TokyoObject
     extend Puppet::TokyoStorage::TokyoObject::ClassMethods
+    include Puppet::Util::ReferenceSerializer
+    extend Puppet::Util::ReferenceSerializer
 
     def self.prefix
         "parameter"
@@ -16,18 +18,23 @@ class Puppet::TokyoStorage::ResourceParameter
         values = munge_parser_values(values)
 
         return values.collect do |v|
-            {:value => v, :name => param.to_s}
+            {:value => serialize_value(v), :name => param.to_s}
         end
     end
 
     def self.munge_parser_values(value)
         values = value.is_a?(Array) ? value : [value]
-        values.map do |v|
+        values = values.collect do |v|
+            puts "munge: %s" % v.inspect
             if v.is_a?(Puppet::Resource::Reference)
-                v
+                puts "ser: %s" % serialize_value(v).inspect
+                serialize_value(v)
             else
+                puts "to_s: %s" % v.inspect
                 v.to_s
             end
         end
+        puts "munged values: %s" % values.inspect
+        values
     end
 end

@@ -9,10 +9,10 @@ class Puppet::Node::Facts::TokyoStorage < Puppet::Indirector::TokyoStorage
         return nil unless host = ar_model.find_by_name(request.key)
 
         facts = Puppet::Node::Facts.new(host[:name])
-        facts.values = host.get_facts.inject({}) do |hash, ary|
+        facts.values = host.get_facts_hash.inject({}) do |hash, ary|
             # Convert all single-member arrays into plain values.
             param = ary[0]
-            values = ary[1].collect { |v| v.value }
+            values = ary[1].collect { |v| v['value'] }
             values = values[0] if values.length == 1
             hash[param] = values
             hash
