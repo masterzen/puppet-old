@@ -363,7 +363,7 @@ class TestScope < Test::Unit::TestCase
         facts_cache_class = Puppet::Node::Facts.indirection.cache_class
         node_cache_class = Puppet::Node.indirection.cache_class
         Puppet[:storeconfigs] = true
-        Puppet::Rails.init
+        Puppet::Storeconfigs::Rails.init
         sleep 1
         children = []
         Puppet[:code] = "

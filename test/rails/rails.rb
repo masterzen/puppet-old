@@ -3,7 +3,7 @@
 require File.dirname(__FILE__) + '/../lib/puppettest'
 
 require 'puppet'
-require 'puppet/rails'
+require 'puppet/storeconfigs/rails'
 require 'puppet/parser/interpreter'
 require 'puppet/parser/parser'
 require 'puppet/network/client'
@@ -19,7 +19,7 @@ class TestRails < Test::Unit::TestCase
 
     def test_includerails
         assert_nothing_raised {
-            require 'puppet/rails'
+            require 'puppet/storeconfigs/rails'
         }
     end
 end

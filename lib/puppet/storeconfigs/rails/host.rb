@@ -1,19 +1,19 @@
-require 'puppet/rails/resource'
-require 'puppet/rails/fact_name'
-require 'puppet/rails/source_file'
+require 'puppet/storeconfigs/rails/resource'
+require 'puppet/storeconfigs/rails/fact_name'
+require 'puppet/storeconfigs/rails/source_file'
 require 'puppet/util/rails/benchmark'
 require 'puppet/util/rails/collection_merger'
 
-class Puppet::Rails::Host < ActiveRecord::Base
+class Puppet::Storeconfigs::Rails::Host < ActiveRecord::Base
     include Puppet::Util::Rails::Benchmark
     extend Puppet::Util::Rails::Benchmark
     include Puppet::Util
     include Puppet::Util::CollectionMerger
 
-    has_many :fact_values, :dependent => :destroy, :class_name => "Puppet::Rails::FactValue"
-    has_many :fact_names, :through => :fact_values, :class_name => "Puppet::Rails::FactName"
+    has_many :fact_values, :dependent => :destroy, :class_name => "Puppet::Storeconfigs::Rails::FactValue"
+    has_many :fact_names, :through => :fact_values, :class_name => "Puppet::Storeconfigs::Rails::FactName"
     belongs_to :source_file
-    has_many :resources, :dependent => :destroy, :class_name => "Puppet::Rails::Resource"
+    has_many :resources, :dependent => :destroy, :class_name => "Puppet::Storeconfigs::Rails::Resource"
 
     # If the host already exists, get rid of its objects
     def self.clean(host)
@@ -105,7 +105,7 @@ class Puppet::Rails::Host < ActiveRecord::Base
 
 
     # This is *very* similar to the merge_parameters method
-    # of Puppet::Rails::Resource.
+    # of Puppet::Storeconfigs::Rails::Resource.
     def merge_facts(facts)
         db_facts = {}
 
@@ -130,7 +130,7 @@ class Puppet::Rails::Host < ActiveRecord::Base
         end
 
         # Perform our deletions.
-        Puppet::Rails::FactValue.delete(deletions) unless deletions.empty?
+        Puppet::Storeconfigs::Rails::FactValue.delete(deletions) unless deletions.empty?
 
         # Lastly, add any new parameters.
         facts.each do |name, value|
@@ -138,7 +138,7 @@ class Puppet::Rails::Host < ActiveRecord::Base
             values = value.is_a?(Array) ? value : [value]
 
             values.each do |v|
-                fact_values.build(:value => v, :fact_name => Puppet::Rails::FactName.find_or_create_by_name(name))
+                fact_values.build(:value => v, :fact_name => Puppet::Storeconfigs::Rails::FactName.find_or_create_by_name(name))
             end
         end
     end
@@ -209,7 +209,7 @@ class Puppet::Rails::Host < ActiveRecord::Base
 
     def add_new_resources(additions)
         additions.each do |resource|
-            Puppet::Rails::Resource.from_parser_resource(self, resource)
+            Puppet::Storeconfigs::Rails::Resource.from_parser_resource(self, resource)
         end
     end
 
@@ -217,7 +217,7 @@ class Puppet::Rails::Host < ActiveRecord::Base
     def build_rails_resource_from_parser_resource(resource)
         db_resource = nil
         accumulate_benchmark("Added resources", :initialization) {
-            args = Puppet::Rails::Resource.rails_resource_initial_args(resource)
+            args = Puppet::Storeconfigs::Rails::Resource.rails_resource_initial_args(resource)
 
             db_resource = self.resources.build(args)
 
@@ -228,7 +228,7 @@ class Puppet::Rails::Host < ActiveRecord::Base
 
         accumulate_benchmark("Added resources", :parameters) {
             resource.each do |param, value|
-                Puppet::Rails::ParamValue.from_parser_param(param, value).each do |value_hash|
+                Puppet::Storeconfigs::Rails::ParamValue.from_parser_param(param, value).each do |value_hash|
                     db_resource.param_values.build(value_hash)
                 end
             end
@@ -284,13 +284,13 @@ class Puppet::Rails::Host < ActiveRecord::Base
         end
         # We need to use 'destroy' here, not 'delete', so that all
         # dependent objects get removed, too.
-        Puppet::Rails::Resource.destroy(deletions) unless deletions.empty?
+        Puppet::Storeconfigs::Rails::Resource.destroy(deletions) unless deletions.empty?
 
         return resources
     end
 
     def find_resources_parameters(resources)
-        params = Puppet::Rails::ParamValue.find_all_params_from_host(self)
+        params = Puppet::Storeconfigs::Rails::ParamValue.find_all_params_from_host(self)
 
         # assign each loaded parameters/tags to the resource it belongs to
         params.each do |param|
@@ -299,7 +299,7 @@ class Puppet::Rails::Host < ActiveRecord::Base
     end
 
     def find_resources_tags(resources)
-        tags = Puppet::Rails::ResourceTag.find_all_tags_from_host(self)
+        tags = Puppet::Storeconfigs::Rails::ResourceTag.find_all_tags_from_host(self)
 
         tags.each do |tag|
             resources[tag['resource_id']].add_tag_to_hash(tag) if resources.include?(tag['resource_id'])

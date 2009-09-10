@@ -282,10 +282,10 @@ describe Puppet::Parser::Collector, "when collecting exported resources" do
     # Stub most of our interface to Rails.
     def stub_rails(everything = false)
         ActiveRecord::Base.stubs(:connected?).returns(false)
-        Puppet::Rails.stubs(:init)
+        Puppet::Storeconfigs::Rails.stubs(:init)
         if everything
-            Puppet::Rails::Host.stubs(:find_by_name).returns(nil)
-            Puppet::Rails::Resource.stubs(:find).returns([])
+            Puppet::Storeconfigs::Rails::Host.stubs(:find_by_name).returns(nil)
+            Puppet::Storeconfigs::Rails::Resource.stubs(:find).returns([])
         end
     end
 
@@ -297,9 +297,9 @@ describe Puppet::Parser::Collector, "when collecting exported resources" do
     it "should use initialize the Rails support if ActiveRecord is not connected" do
         @compiler.stubs(:resources).returns([])
         ActiveRecord::Base.expects(:connected?).returns(false)
-        Puppet::Rails.expects(:init)
-        Puppet::Rails::Host.stubs(:find_by_name).returns(nil)
-        Puppet::Rails::Resource.stubs(:find).returns([])
+        Puppet::Storeconfigs::Rails.expects(:init)
+        Puppet::Storeconfigs::Rails::Host.stubs(:find_by_name).returns(nil)
+        Puppet::Storeconfigs::Rails::Resource.stubs(:find).returns([])
 
         @collector.evaluate
     end
@@ -335,10 +335,10 @@ describe Puppet::Parser::Collector, "when collecting exported resources" do
 
     it "should convert all found resources into parser resources" do
         stub_rails()
-        Puppet::Rails::Host.stubs(:find_by_name).returns(nil)
+        Puppet::Storeconfigs::Rails::Host.stubs(:find_by_name).returns(nil)
 
         one = stub 'one', :restype => "Mytype", :title => "one", :virtual? => true, :exported? => true, :ref => "one"
-        Puppet::Rails::Resource.stubs(:find).returns([one])
+        Puppet::Storeconfigs::Rails::Resource.stubs(:find).returns([one])
 
         resource = mock 'resource'
         one.expects(:to_resource).with(@scope).returns(resource)
@@ -356,10 +356,10 @@ describe Puppet::Parser::Collector, "when collecting exported resources" do
 
     it "should override all exported collected resources if collector has an override" do
         stub_rails()
-        Puppet::Rails::Host.stubs(:find_by_name).returns(nil)
+        Puppet::Storeconfigs::Rails::Host.stubs(:find_by_name).returns(nil)
 
         one = stub 'one', :restype => "Mytype", :title => "one", :virtual? => true, :exported? => true, :ref => "one"
-        Puppet::Rails::Resource.stubs(:find).returns([one])
+        Puppet::Storeconfigs::Rails::Resource.stubs(:find).returns([one])
 
         resource = mock 'resource'
         one.expects(:to_resource).with(@scope).returns(resource)
@@ -385,10 +385,10 @@ describe Puppet::Parser::Collector, "when collecting exported resources" do
 
     it "should store converted resources in the compile's resource list" do
         stub_rails()
-        Puppet::Rails::Host.stubs(:find_by_name).returns(nil)
+        Puppet::Storeconfigs::Rails::Host.stubs(:find_by_name).returns(nil)
 
         one = stub 'one', :restype => "Mytype", :title => "one", :virtual? => true, :exported? => true, :ref => "one"
-        Puppet::Rails::Resource.stubs(:find).returns([one])
+        Puppet::Storeconfigs::Rails::Resource.stubs(:find).returns([one])
 
         resource = mock 'resource'
         one.expects(:to_resource).with(@scope).returns(resource)
@@ -407,10 +407,10 @@ describe Puppet::Parser::Collector, "when collecting exported resources" do
     # This way one host doesn't store another host's resources as exported.
     it "should mark resources collected from the database as not exported" do
         stub_rails()
-        Puppet::Rails::Host.stubs(:find_by_name).returns(nil)
+        Puppet::Storeconfigs::Rails::Host.stubs(:find_by_name).returns(nil)
 
         one = stub 'one', :restype => "Mytype", :title => "one", :virtual? => true, :exported? => true, :ref => "one"
-        Puppet::Rails::Resource.stubs(:find).returns([one])
+        Puppet::Storeconfigs::Rails::Resource.stubs(:find).returns([one])
 
         resource = mock 'resource'
         one.expects(:to_resource).with(@scope).returns(resource)
@@ -428,12 +428,12 @@ describe Puppet::Parser::Collector, "when collecting exported resources" do
 
     it "should fail if an equivalent resource already exists in the compile" do
         stub_rails()
-        Puppet::Rails::Host.stubs(:find_by_name).returns(nil)
+        Puppet::Storeconfigs::Rails::Host.stubs(:find_by_name).returns(nil)
 
         rails = stub 'one', :restype => "Mytype", :title => "one", :virtual? => true, :exported? => true, :id => 1, :ref => "yay"
         inmemory = stub 'one', :type => "Mytype", :virtual? => true, :exported? => true, :rails_id => 2
 
-        Puppet::Rails::Resource.stubs(:find).returns([rails])
+        Puppet::Storeconfigs::Rails::Resource.stubs(:find).returns([rails])
 
         resource = mock 'resource'
 
@@ -447,12 +447,12 @@ describe Puppet::Parser::Collector, "when collecting exported resources" do
 
     it "should ignore exported resources that match already-collected resources" do
         stub_rails()
-        Puppet::Rails::Host.stubs(:find_by_name).returns(nil)
+        Puppet::Storeconfigs::Rails::Host.stubs(:find_by_name).returns(nil)
 
         rails = stub 'one', :restype => "Mytype", :title => "one", :virtual? => true, :exported? => true, :id => 1, :ref => "yay"
         inmemory = stub 'one', :type => "Mytype", :virtual? => true, :exported? => true, :rails_id => 1
 
-        Puppet::Rails::Resource.stubs(:find).returns([rails])
+        Puppet::Storeconfigs::Rails::Resource.stubs(:find).returns([rails])
 
         resource = mock 'resource'
 
@@ -484,9 +484,9 @@ describe Puppet::Parser::Collector, "when building its ActiveRecord query for co
 
         ActiveRecord::Base.stubs(:connected?).returns(false)
 
-        Puppet::Rails.stubs(:init)
-        Puppet::Rails::Host.stubs(:find_by_name).returns(nil)
-        Puppet::Rails::Resource.stubs(:find).returns([])
+        Puppet::Storeconfigs::Rails.stubs(:init)
+        Puppet::Storeconfigs::Rails::Host.stubs(:find_by_name).returns(nil)
+        Puppet::Storeconfigs::Rails::Resource.stubs(:find).returns([])
 
         Puppet.settings.stubs(:value).with(:storeconfigs).returns true
     end
@@ -495,9 +495,9 @@ describe Puppet::Parser::Collector, "when building its ActiveRecord query for co
         @host = mock 'host'
         @host.stubs(:id).returns 5
 
-        Puppet::Rails::Host.expects(:find_by_name).with(@scope.host).returns(@host)
+        Puppet::Storeconfigs::Rails::Host.expects(:find_by_name).with(@scope.host).returns(@host)
 
-        Puppet::Rails::Resource.stubs(:find).with { |*arguments|
+        Puppet::Storeconfigs::Rails::Resource.stubs(:find).with { |*arguments|
             options = arguments[3]
             options[:conditions][0] =~ /^host_id != \?/ and options[:conditions][1] == 5
         }.returns([@resource])
@@ -506,7 +506,7 @@ describe Puppet::Parser::Collector, "when building its ActiveRecord query for co
     end
 
     it "should return parameter names, parameter values when querying ActiveRecord" do
-        Puppet::Rails::Resource.stubs(:find).with { |*arguments|
+        Puppet::Storeconfigs::Rails::Resource.stubs(:find).with { |*arguments|
             options = arguments[3]
             options[:include] == {:param_values => :param_name}
         }.returns([@resource])
@@ -516,7 +516,7 @@ describe Puppet::Parser::Collector, "when building its ActiveRecord query for co
 
     it "should return tags when querying ActiveRecord with a tag exported query" do
         @collector.equery = "puppet_tags.name = test"
-        Puppet::Rails::Resource.stubs(:find).with { |*arguments|
+        Puppet::Storeconfigs::Rails::Resource.stubs(:find).with { |*arguments|
             options = arguments[3]
             options[:include] == {:param_values => :param_name, :puppet_tags => :resource_tags}
         }.returns([@resource])
@@ -525,7 +525,7 @@ describe Puppet::Parser::Collector, "when building its ActiveRecord query for co
     end
 
     it "should only search for exported resources with the matching type" do
-        Puppet::Rails::Resource.stubs(:find).with { |*arguments|
+        Puppet::Storeconfigs::Rails::Resource.stubs(:find).with { |*arguments|
             options = arguments[3]
             options[:conditions][0].include?("(exported=? AND restype=?)") and options[:conditions][1] == true and options[:conditions][2] == "Mytype"
         }.returns([@resource])
@@ -535,7 +535,7 @@ describe Puppet::Parser::Collector, "when building its ActiveRecord query for co
 
     it "should include the export query if one is provided" do
         @collector.equery = "test = true"
-        Puppet::Rails::Resource.stubs(:find).with { |*arguments|
+        Puppet::Storeconfigs::Rails::Resource.stubs(:find).with { |*arguments|
             options = arguments[3]
             options[:conditions][0].include?("test = true")
         }.returns([@resource])

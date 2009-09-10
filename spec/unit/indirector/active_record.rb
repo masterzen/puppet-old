@@ -6,7 +6,7 @@ require 'puppet/indirector/active_record'
 
 describe Puppet::Indirector::ActiveRecord do
     before do
-        Puppet::Rails.stubs(:init)
+        Puppet::Storeconfigs::Rails.stubs(:init)
 
         Puppet::Indirector::Terminus.stubs(:register_terminus_class)
         @model = mock 'model'
@@ -37,7 +37,7 @@ describe Puppet::Indirector::ActiveRecord do
 
     describe "when initializing" do
         it "should init Rails" do
-            Puppet::Rails.expects(:init)
+            Puppet::Storeconfigs::Rails.expects(:init)
             @active_record_class.new
         end
     end

@@ -1,6 +1,6 @@
 require 'puppet'
 require 'timeout'
-require 'puppet/rails'
+require 'puppet/storeconfigs/rails'
 require 'puppet/util/methodhelper'
 require 'puppet/parser/parser'
 require 'puppet/parser/compiler'
@@ -38,7 +38,7 @@ class Puppet::Parser::Interpreter
         # The class won't always be defined during testing.
         if Puppet[:storeconfigs]
             if Puppet.features.rails?
-                Puppet::Rails.init
+                Puppet::Storeconfigs::Rails.init
             else
                 raise Puppet::Error, "Rails is missing; cannot store configurations"
             end

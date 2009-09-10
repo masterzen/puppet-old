@@ -5,7 +5,7 @@ module Puppet::Util::Rails::Benchmark
     $benchmarks = {:accumulated => {}}
 
     def time_debug?
-        Puppet::Rails::TIME_DEBUG
+        Puppet::Storeconfigs::Rails::TIME_DEBUG
     end
 
     def railsmark(message)
@@ -18,7 +18,7 @@ module Puppet::Util::Rails::Benchmark
     end
 
     def debug_benchmark(message)
-        unless Puppet::Rails::TIME_DEBUG
+        unless Puppet::Storeconfigs::Rails::TIME_DEBUG
             return yield
         end
 

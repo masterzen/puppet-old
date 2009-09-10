@@ -1,4 +1,4 @@
-class Puppet::Rails::Schema
+class Puppet::Storeconfigs::Rails::Schema
     def self.init
         oldout = nil
         Puppet::Util.benchmark(Puppet, :notice, "Initialized database") do

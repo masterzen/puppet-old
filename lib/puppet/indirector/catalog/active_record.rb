@@ -1,9 +1,9 @@
-require 'puppet/rails/host'
+require 'puppet/storeconfigs/rails/host'
 require 'puppet/indirector/active_record'
 require 'puppet/resource/catalog'
 
 class Puppet::Resource::Catalog::ActiveRecord < Puppet::Indirector::ActiveRecord
-    use_ar_model Puppet::Rails::Host
+    use_ar_model Puppet::Storeconfigs::Rails::Host
 
     # If we can find the host, then return a catalog with the host's resources
     # as the vertices.

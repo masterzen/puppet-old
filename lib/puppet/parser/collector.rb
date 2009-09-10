@@ -97,10 +97,10 @@ class Puppet::Parser::Collector
 
     # Create our active record query.
     def build_active_record_query
-        Puppet::Rails.init unless ActiveRecord::Base.connected?
+        Puppet::Storeconfigs::Rails.init unless ActiveRecord::Base.connected?
 
         raise Puppet::DevError, "Cannot collect resources for a nil host" unless @scope.host
-        host = Puppet::Rails::Host.find_by_name(@scope.host)
+        host = Puppet::Storeconfigs::Rails::Host.find_by_name(@scope.host)
 
         query = {:include => {:param_values => :param_name}}
 
@@ -139,7 +139,7 @@ class Puppet::Parser::Collector
         # and such, we'll need to vary the conditions, but this works with no
         # attributes, anyway.
         time = Puppet::Util.thinmark do
-            Puppet::Rails::Resource.find(:all, @type, true, query).each do |obj|
+            Puppet::Storeconfigs::Rails::Resource.find(:all, @type, true, query).each do |obj|
                 if resource = exported_resource(obj)
                     count += 1
                     resources << resource

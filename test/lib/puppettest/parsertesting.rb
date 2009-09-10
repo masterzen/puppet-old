@@ -1,5 +1,5 @@
 require 'puppettest'
-require 'puppet/rails'
+require 'puppet/storeconfigs/rails'
 
 module PuppetTest::ParserTesting
     include PuppetTest

@@ -48,7 +48,7 @@ end
 
 printusage(1) unless ARGV.size > 0
 
-require 'puppet/rails'
+require 'puppet/storeconfigs/rails'
 Puppet[:config] = config
 Puppet.parse_config
 pm_conf = Puppet.settings.instance_variable_get(:@values)[:puppetmasterd]
@@ -75,7 +75,7 @@ args[:database] = "puppet" unless not args[:database].to_s.empty?
 ActiveRecord::Base.establish_connection(args)
 
 ARGV.each { |hostname|
-    if @host = Puppet::Rails::Host.find_by_name(hostname.strip)
+    if @host = Puppet::Storeconfigs::Rails::Host.find_by_name(hostname.strip)
         print "Killing #{hostname}..."
         $stdout.flush
         @host.destroy

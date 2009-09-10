@@ -1,6 +1,6 @@
 require 'puppet/util/rails/reference_serializer'
 
-class Puppet::Rails::ParamValue < ActiveRecord::Base
+class Puppet::Storeconfigs::Rails::ParamValue < ActiveRecord::Base
     include Puppet::Util::ReferenceSerializer
     extend Puppet::Util::ReferenceSerializer
 
@@ -11,7 +11,7 @@ class Puppet::Rails::ParamValue < ActiveRecord::Base
     def self.from_parser_param(param, values)
         values = munge_parser_values(values)
 
-        param_name = Puppet::Rails::ParamName.find_or_create_by_name(param.to_s)
+        param_name = Puppet::Storeconfigs::Rails::ParamName.find_or_create_by_name(param.to_s)
         return values.collect do |v|
             {:value => v, :param_name => param_name}
         end
