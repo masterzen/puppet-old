@@ -1,9 +1,9 @@
 #!/usr/bin/env ruby
 
 require File.dirname(__FILE__) + '/../spec_helper'
-require 'puppet/rails'
+require 'puppet/storeconfigs/rails'
 
-describe Puppet::Rails, "when initializing any connection" do
+describe Puppet::Storeconfigs::Rails, "when initializing any connection" do
     confine "Cannot test without ActiveRecord" => Puppet.features.rails?
 
     before do
@@ -19,7 +19,7 @@ describe Puppet::Rails, "when initializing any connection" do
     it "should use settings" do
         Puppet.settings.expects(:use).with(:main, :rails, :puppetmasterd)
 
-        Puppet::Rails.connect
+        Puppet::Storeconfigs::Rails.connect
     end
 
     it "should set up a logger with the appropriate Rails log file" do
@@ -27,7 +27,7 @@ describe Puppet::Rails, "when initializing any connection" do
         Logger.expects(:new).with(Puppet[:railslog]).returns(logger)
         ActiveRecord::Base.expects(:logger=).with(logger)
 
-        Puppet::Rails.connect
+        Puppet::Storeconfigs::Rails.connect
     end
 
     it "should set the log level to whatever the value is in the settings" do
@@ -41,26 +41,26 @@ describe Puppet::Rails, "when initializing any connection" do
 
         ActiveRecord::Base.stubs(:verify_active_connections!)
         ActiveRecord::Base.stubs(:establish_connection)
-        Puppet::Rails.stubs(:database_arguments)
+        Puppet::Storeconfigs::Rails.stubs(:database_arguments)
 
-        Puppet::Rails.connect
+        Puppet::Storeconfigs::Rails.connect
     end
 
     it "should call ActiveRecord::Base.verify_active_connections!" do
         ActiveRecord::Base.expects(:verify_active_connections!)
 
-        Puppet::Rails.connect
+        Puppet::Storeconfigs::Rails.connect
     end
 
     it "should call ActiveRecord::Base.establish_connection with database_arguments" do
-        Puppet::Rails.expects(:database_arguments)
+        Puppet::Storeconfigs::Rails.expects(:database_arguments)
         ActiveRecord::Base.expects(:establish_connection)
 
-        Puppet::Rails.connect
+        Puppet::Storeconfigs::Rails.connect
     end
 end
 
-describe Puppet::Rails, "when initializing a sqlite3 connection" do
+describe Puppet::Storeconfigs::Rails, "when initializing a sqlite3 connection" do
     confine "Cannot test without ActiveRecord" => Puppet.features.rails?
 
     it "should provide the adapter, log_level, and dbfile arguments" do
@@ -68,7 +68,7 @@ describe Puppet::Rails, "when initializing a sqlite3 connection" do
         Puppet.settings.expects(:value).with(:rails_loglevel).returns("testlevel")
         Puppet.settings.expects(:value).with(:dblocation).returns("testlocation")
 
-        Puppet::Rails.database_arguments.should == {
+        Puppet::Storeconfigs::Rails.database_arguments.should == {
             :adapter => "sqlite3",
             :log_level => "testlevel",
             :dbfile => "testlocation"
@@ -76,7 +76,7 @@ describe Puppet::Rails, "when initializing a sqlite3 connection" do
     end
 end
 
-describe Puppet::Rails, "when initializing a mysql or postgresql connection" do
+describe Puppet::Storeconfigs::Rails, "when initializing a mysql or postgresql connection" do
     confine "Cannot test without ActiveRecord" => Puppet.features.rails?
 
     it "should provide the adapter, log_level, and host, username, password, and database arguments" do
@@ -88,7 +88,7 @@ describe Puppet::Rails, "when initializing a mysql or postgresql connection" do
         Puppet.settings.stubs(:value).with(:dbname).returns("testname")
         Puppet.settings.stubs(:value).with(:dbsocket).returns("")
 
-        Puppet::Rails.database_arguments.should == {
+        Puppet::Storeconfigs::Rails.database_arguments.should == {
             :adapter => "mysql",
             :log_level => "testlevel",
             :host => "testserver",
@@ -107,7 +107,7 @@ describe Puppet::Rails, "when initializing a mysql or postgresql connection" do
         Puppet.settings.stubs(:value).with(:dbname).returns("testname")
         Puppet.settings.stubs(:value).with(:dbsocket).returns("testsocket")
 
-        Puppet::Rails.database_arguments.should == {
+        Puppet::Storeconfigs::Rails.database_arguments.should == {
             :adapter => "mysql",
             :log_level => "testlevel",
             :host => "testserver",

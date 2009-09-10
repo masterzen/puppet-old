@@ -3,7 +3,7 @@
 require File.dirname(__FILE__) + '/../lib/puppettest'
 
 require 'puppet'
-require 'puppet/rails'
+require 'puppet/storeconfigs/rails'
 require 'puppettest'
 require 'puppettest/railstesting'
 
@@ -24,7 +24,7 @@ class TestRailsParameter < Test::Unit::TestCase
         parser = mkparser
         source = parser.newclass "myclass"
 
-        host = Puppet::Rails::Host.new(:name => "myhost")
+        host = Puppet::Storeconfigs::Rails::Host.new(:name => "myhost")
 
         host.save
 
@@ -36,7 +36,7 @@ class TestRailsParameter < Test::Unit::TestCase
         # Use array and non-array values, to make sure we get things back in
         # the same form.
         params.each do |name, value|
-            param = Puppet::Rails::ParamName.find_or_create_by_name(name)
+            param = Puppet::Storeconfigs::Rails::ParamName.find_or_create_by_name(name)
             if value.is_a? Array
                 values = value
             else
@@ -56,7 +56,7 @@ class TestRailsParameter < Test::Unit::TestCase
 
         # And try to convert our parameter
         params.each do |name, value|
-            param = Puppet::Rails::ParamName.find_by_name(name)
+            param = Puppet::Storeconfigs::Rails::ParamName.find_by_name(name)
             pp = nil
             assert_nothing_raised do
                 pp = param.to_resourceparam(resource, source)

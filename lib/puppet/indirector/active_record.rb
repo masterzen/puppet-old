@@ -14,7 +14,7 @@ class Puppet::Indirector::ActiveRecord < Puppet::Indirector::Terminus
     end
 
     def initialize
-        Puppet::Rails.init
+        Puppet::Storeconfigs::Rails.init
     end
 
     def find(request)

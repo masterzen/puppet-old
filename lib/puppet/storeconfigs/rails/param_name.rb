@@ -1,8 +1,8 @@
 require 'puppet/util/rails/collection_merger'
-require 'puppet/rails/param_value'
+require 'puppet/storeconfigs/rails/param_value'
 require 'puppet/util/rails/cache_accumulator'
 
-class Puppet::Rails::ParamName < ActiveRecord::Base
+class Puppet::Storeconfigs::Rails::ParamName < ActiveRecord::Base
     include Puppet::Util::CollectionMerger
     has_many :param_values, :dependent => :destroy
 

@@ -10,7 +10,7 @@ describe "Puppet::Node::Facts::ActiveRecord" do
     before do
         require 'puppet/indirector/facts/active_record'
         Puppet.features.stubs(:rails?).returns true
-        Puppet::Rails.stubs(:init)
+        Puppet::Storeconfigs::Rails.stubs(:init)
         @terminus = Puppet::Node::Facts::ActiveRecord.new
     end
 
@@ -18,8 +18,8 @@ describe "Puppet::Node::Facts::ActiveRecord" do
         Puppet::Node::Facts::ActiveRecord.ancestors.should be_include(Puppet::Indirector::ActiveRecord)
     end
 
-    it "should use Puppet::Rails::Host as its ActiveRecord model" do
-        Puppet::Node::Facts::ActiveRecord.ar_model.should equal(Puppet::Rails::Host)
+    it "should use Puppet::Storeconfigs::Rails::Host as its ActiveRecord model" do
+        Puppet::Node::Facts::ActiveRecord.ar_model.should equal(Puppet::Storeconfigs::Rails::Host)
     end
 
     describe "when finding an instance" do
@@ -28,17 +28,17 @@ describe "Puppet::Node::Facts::ActiveRecord" do
         end
 
         it "should use the Hosts ActiveRecord class to find the host" do
-            Puppet::Rails::Host.expects(:find_by_name).with { |key, args| key == "foo" }
+            Puppet::Storeconfigs::Rails::Host.expects(:find_by_name).with { |key, args| key == "foo" }
             @terminus.find(@request)
         end
 
         it "should include the fact names and values when finding the host" do
-            Puppet::Rails::Host.expects(:find_by_name).with { |key, args| args[:include] == {:fact_values => :fact_name} }
+            Puppet::Storeconfigs::Rails::Host.expects(:find_by_name).with { |key, args| args[:include] == {:fact_values => :fact_name} }
             @terminus.find(@request)
         end
 
         it "should return nil if no host instance can be found" do
-            Puppet::Rails::Host.expects(:find_by_name).returns nil
+            Puppet::Storeconfigs::Rails::Host.expects(:find_by_name).returns nil
 
             @terminus.find(@request).should be_nil
         end
@@ -47,7 +47,7 @@ describe "Puppet::Node::Facts::ActiveRecord" do
             host = stub 'host', :name => "foo"
             host.expects(:get_facts_hash).returns("one" => [mock("two_value", :value => "two")], "three" => [mock("three_value", :value => "four")])
 
-            Puppet::Rails::Host.expects(:find_by_name).returns host
+            Puppet::Storeconfigs::Rails::Host.expects(:find_by_name).returns host
 
             result = @terminus.find(@request)
 
@@ -60,7 +60,7 @@ describe "Puppet::Node::Facts::ActiveRecord" do
             host = stub 'host', :name => "foo"
             host.expects(:get_facts_hash).returns("one" => [mock("two_value", :value => "two")])
 
-            Puppet::Rails::Host.expects(:find_by_name).returns host
+            Puppet::Storeconfigs::Rails::Host.expects(:find_by_name).returns host
 
             @terminus.find(@request).values["one"].should == "two"
         end
@@ -69,21 +69,21 @@ describe "Puppet::Node::Facts::ActiveRecord" do
     describe "when saving an instance" do
         before do
             @host = stub 'host', :name => "foo", :save => nil, :merge_facts => nil
-            Puppet::Rails::Host.stubs(:find_by_name).returns @host
+            Puppet::Storeconfigs::Rails::Host.stubs(:find_by_name).returns @host
             @facts = Puppet::Node::Facts.new("foo", "one" => "two", "three" => "four")
             @request = stub 'request', :key => "foo", :instance => @facts
         end
 
         it "should find the Rails host with the same name" do
-            Puppet::Rails::Host.expects(:find_by_name).with("foo").returns @host
+            Puppet::Storeconfigs::Rails::Host.expects(:find_by_name).with("foo").returns @host
 
             @terminus.save(@request)
         end
 
         it "should create a new Rails host if none can be found" do
-            Puppet::Rails::Host.expects(:find_by_name).with("foo").returns nil
+            Puppet::Storeconfigs::Rails::Host.expects(:find_by_name).with("foo").returns nil
 
-            Puppet::Rails::Host.expects(:create).with(:name => "foo").returns @host
+            Puppet::Storeconfigs::Rails::Host.expects(:create).with(:name => "foo").returns @host
 
             @terminus.save(@request)
         end

@@ -167,9 +167,9 @@ class Puppet::Resource::Catalog::Compiler < Puppet::Indirector::Code
     # the Node class, or somewhere that's got abstract backends.
     def update_node_check(node)
         if Puppet.features.rails? and Puppet[:storeconfigs]
-            Puppet::Rails.connect
+            Puppet::Storeconfigs::Rails.connect
 
-            host = Puppet::Rails::Host.find_or_create_by_name(node.name)
+            host = Puppet::Storeconfigs::Rails::Host.find_or_create_by_name(node.name)
             host.last_freshcheck = Time.now
             host.save
         end

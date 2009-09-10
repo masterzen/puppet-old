@@ -14,12 +14,12 @@ module PuppetTest::RailsTesting
     end
 
     def railsinit
-        Puppet::Rails.init
+        Puppet::Storeconfigs::Rails.init
     end
 
     def railsteardown
         if Puppet[:dbadapter] != "sqlite3"
-            Puppet::Rails.teardown
+            Puppet::Storeconfigs::Rails.teardown
         end
     end
 
@@ -28,7 +28,7 @@ module PuppetTest::RailsTesting
         railsinit
 
         # We need a host for resources
-        #host = Puppet::Rails::Host.new(:name => Facter.value("hostname"))
+        #host = Puppet::Storeconfigs::Rails::Host.new(:name => Facter.value("hostname"))
 
         # Now build a resource
         resources = []
@@ -43,7 +43,7 @@ module PuppetTest::RailsTesting
         node = mknode(facts["hostname"])
         node.parameters = facts
         assert_nothing_raised {
-            host = Puppet::Rails::Host.store(node, resources)
+            host = Puppet::Storeconfigs::Rails::Host.store(node, resources)
         }
 
         # Now save the whole thing

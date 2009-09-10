@@ -1,20 +1,20 @@
 require 'puppet'
-require 'puppet/rails/param_name'
-require 'puppet/rails/param_value'
-require 'puppet/rails/puppet_tag'
+require 'puppet/storeconfigs/rails/param_name'
+require 'puppet/storeconfigs/rails/param_value'
+require 'puppet/storeconfigs/rails/puppet_tag'
 require 'puppet/util/rails/benchmark'
 require 'puppet/util/rails/collection_merger'
 
-class Puppet::Rails::Resource < ActiveRecord::Base
+class Puppet::Storeconfigs::Rails::Resource < ActiveRecord::Base
     include Puppet::Util::CollectionMerger
     include Puppet::Util::ReferenceSerializer
     include Puppet::Util::Rails::Benchmark
 
-    has_many :param_values, :dependent => :destroy, :class_name => "Puppet::Rails::ParamValue"
-    has_many :param_names, :through => :param_values, :class_name => "Puppet::Rails::ParamName"
+    has_many :param_values, :dependent => :destroy, :class_name => "Puppet::Storeconfigs::Rails::ParamValue"
+    has_many :param_names, :through => :param_values, :class_name => "Puppet::Storeconfigs::Rails::ParamName"
 
-    has_many :resource_tags, :dependent => :destroy, :class_name => "Puppet::Rails::ResourceTag"
-    has_many :puppet_tags, :through => :resource_tags, :class_name => "Puppet::Rails::PuppetTag"
+    has_many :resource_tags, :dependent => :destroy, :class_name => "Puppet::Storeconfigs::Rails::ResourceTag"
+    has_many :puppet_tags, :through => :resource_tags, :class_name => "Puppet::Storeconfigs::Rails::PuppetTag"
 
     belongs_to :source_file
     belongs_to :host
@@ -43,7 +43,7 @@ class Puppet::Rails::Resource < ActiveRecord::Base
     end
 
     def add_resource_tag(tag)
-        pt = Puppet::Rails::PuppetTag.accumulate_by_name(tag)
+        pt = Puppet::Storeconfigs::Rails::PuppetTag.accumulate_by_name(tag)
         resource_tags.build(:puppet_tag => pt)
     end
 
@@ -56,7 +56,7 @@ class Puppet::Rails::Resource < ActiveRecord::Base
     end
 
     def file=(file)
-        self.source_file = Puppet::Rails::SourceFile.find_or_create_by_filename(file)
+        self.source_file = Puppet::Storeconfigs::Rails::SourceFile.find_or_create_by_filename(file)
     end
 
     def title
@@ -138,7 +138,7 @@ class Puppet::Rails::Resource < ActiveRecord::Base
         end
 
         # Perform our deletions.
-        Puppet::Rails::ParamValue.delete(deletions) unless deletions.empty?
+        Puppet::Storeconfigs::Rails::ParamValue.delete(deletions) unless deletions.empty?
 
         # Lastly, add any new parameters.
         catalog_params.each do |name, value|
@@ -146,7 +146,7 @@ class Puppet::Rails::Resource < ActiveRecord::Base
             values = value.is_a?(Array) ? value : [value]
 
             values.each do |v|
-                param_values.build(:value => serialize_value(v), :line => resource.line, :param_name => Puppet::Rails::ParamName.accumulate_by_name(name))
+                param_values.build(:value => serialize_value(v), :line => resource.line, :param_name => Puppet::Storeconfigs::Rails::ParamName.accumulate_by_name(name))
             end
         end
     end
@@ -160,7 +160,7 @@ class Puppet::Rails::Resource < ActiveRecord::Base
             deletions << tag['id'] and next unless resource_tags.include?(tag['name'])
             in_db << tag['name']
         end
-        Puppet::Rails::ResourceTag.delete(deletions) unless deletions.empty?
+        Puppet::Storeconfigs::Rails::ResourceTag.delete(deletions) unless deletions.empty?
 
         (resource_tags - in_db).each do |tag|
             add_resource_tag(tag)
@@ -205,7 +205,7 @@ class Puppet::Rails::Resource < ActiveRecord::Base
 
     # Returns a hash of parameter names and values, no ActiveRecord instances.
     def to_hash
-        Puppet::Rails::ParamValue.find_all_params_from_resource(self).inject({}) do |hash, value|
+        Puppet::Storeconfigs::Rails::ParamValue.find_all_params_from_resource(self).inject({}) do |hash, value|
             hash[value['name']] ||= []
             hash[value['name']] << value.value
             hash

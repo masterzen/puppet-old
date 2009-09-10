@@ -1,4 +1,4 @@
-class Puppet::Rails::SourceFile < ActiveRecord::Base
+class Puppet::Storeconfigs::Rails::SourceFile < ActiveRecord::Base
     has_one :host
     has_one :resource
 

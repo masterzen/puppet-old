@@ -14,8 +14,8 @@ describe "Puppet::Node::ActiveRecord" do
         Puppet::Node::ActiveRecord.ancestors.should be_include(Puppet::Indirector::ActiveRecord)
     end
 
-    it "should use Puppet::Rails::Host as its ActiveRecord model" do
-        Puppet::Node::ActiveRecord.ar_model.should equal(Puppet::Rails::Host)
+    it "should use Puppet::Storeconfigs::Rails::Host as its ActiveRecord model" do
+        Puppet::Node::ActiveRecord.ar_model.should equal(Puppet::Storeconfigs::Rails::Host)
     end
 
     it "should call fact_merge when a node is found" do

@@ -67,9 +67,9 @@
 # Licensed under the GPL 2
 
 require 'puppet'
-require 'puppet/rails'
-require 'puppet/rails/resource'
-require 'puppet/rails/param_value'
+require 'puppet/storeconfigs/rails'
+require 'puppet/storeconfigs/rails/resource'
+require 'puppet/storeconfigs/rails/param_value'
 require 'puppet/network/client'
 require 'puppet/parser/collector'
 require 'puppet/provider/naginator'
@@ -77,9 +77,9 @@ require 'getoptlong'
 
 # Monkey-patch the rails resources so we can
 # easily convert them to nagios instances.
-class Puppet::Rails::Resource
+class Puppet::Storeconfigs::Rails::Resource
     def to_param_hash
-        values = @params_hash || Puppet::Rails::ParamValue.find_all_params_from_resource(self)
+        values = @params_hash || Puppet::Storeconfigs::Rails::ParamValue.find_all_params_from_resource(self)
         if values.size == 0
             return {}
         end

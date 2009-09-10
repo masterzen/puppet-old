@@ -2,8 +2,9 @@
 
 require 'facter'
 require 'puppet'
+require 'puppet/storeconfigs'
 
-module Puppet::Rails
+module Puppet::Storeconfigs::Rails
     TIME_DEBUG = true
 
     def self.connect
@@ -61,14 +62,14 @@ module Puppet::Rails
     # that could make callbacks.
     def self.init
         unless Puppet.features.rails?
-            raise Puppet::DevError, "No activerecord, cannot init Puppet::Rails"
+            raise Puppet::DevError, "No activerecord, cannot init Puppet::Storeconfigs::Rails"
         end
 
         connect()
 
         unless ActiveRecord::Base.connection.tables.include?("resources")
-            require 'puppet/rails/database/schema'
-            Puppet::Rails::Schema.init
+            require 'puppet/storeconfigs/rails/database/schema'
+            Puppet::Storeconfigs::Rails::Schema.init
         end
 
         if Puppet[:dbmigrate]
@@ -80,7 +81,7 @@ module Puppet::Rails
     def self.migrate
         dbdir = nil
         $:.each { |d|
-            tmp = File.join(d, "puppet/rails/database")
+            tmp = File.join(d, "puppet/storeconfigs/rails/database")
             if FileTest.directory?(tmp)
                 dbdir = tmp
                 break
@@ -88,7 +89,7 @@ module Puppet::Rails
         }
 
         unless dbdir
-            raise Puppet::Error, "Could not find Puppet::Rails database dir"
+            raise Puppet::Error, "Could not find Puppet::Storeconfigs::Rails database dir"
         end
 
         unless ActiveRecord::Base.connection.tables.include?("resources")
@@ -110,7 +111,7 @@ module Puppet::Rails
     # Tear down the database.  Mostly only used during testing.
     def self.teardown
         unless Puppet.features.rails?
-            raise Puppet::DevError, "No activerecord, cannot init Puppet::Rails"
+            raise Puppet::DevError, "No activerecord, cannot init Puppet::Storeconfigs::Rails"
         end
 
         Puppet.settings.use(:puppetmasterd, :rails)
@@ -131,6 +132,6 @@ module Puppet::Rails
 end
 
 if Puppet.features.rails?
-    require 'puppet/rails/host'
+    require 'puppet/storeconfigs/rails/host'
 end
 

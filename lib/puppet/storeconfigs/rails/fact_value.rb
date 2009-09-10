@@ -1,4 +1,4 @@
-class Puppet::Rails::FactValue < ActiveRecord::Base
+class Puppet::Storeconfigs::Rails::FactValue < ActiveRecord::Base
     belongs_to :fact_name
     belongs_to :host
 

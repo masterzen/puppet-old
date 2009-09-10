@@ -173,6 +173,6 @@ require 'puppet/util/storage'
 require 'puppet/parser/interpreter'
 
 if Puppet[:storeconfigs]
-    require 'puppet/rails'
+    require 'puppet/storeconfigs/rails'
 end
 

@@ -306,7 +306,7 @@ end
 #   RESOURCE_COUNT=50 ext/puppet-test --suite rails --test storage --confdir /tmp/storagetesting --vardir /tmp/storagetesting --repeat 10
 Suite.new :rails, "Rails Interactions" do
     def prepare
-        Puppet::Rails.init
+        Puppet::Storeconfigs::Rails.init
         @facts = Facter.to_hash
 
         if num = ENV["RESOURCECOUNT"]
@@ -360,7 +360,7 @@ Suite.new :rails, "Rails Interactions" do
             file.exported = true
             resources << exec << user << file
         end
-        Puppet::Rails::Host.store(args)
+        Puppet::Storeconfigs::Rails::Host.store(args)
     end
 end
 

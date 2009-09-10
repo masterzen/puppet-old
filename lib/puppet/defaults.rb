@@ -746,6 +746,7 @@ module Puppet
             requires ActiveRecord from Ruby on Rails.",
             :call_on_define => true, # Call our hook with the default value, so we always get the libdir set.
             :hook => proc do |value|
+                require 'puppet/storeconfigs'
                 require 'puppet/node'
                 require 'puppet/node/facts'
                 require 'puppet/resource/catalog'

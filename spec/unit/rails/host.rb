@@ -2,7 +2,7 @@
 
 require File.dirname(__FILE__) + '/../../spec_helper'
 
-describe "Puppet::Rails::Host" do
+describe "Puppet::Storeconfigs::Rails::Host" do
     confine "Cannot test without ActiveRecord" => Puppet.features.rails?
 
     def column(name, type)
@@ -10,10 +10,10 @@ describe "Puppet::Rails::Host" do
     end
 
     before do
-        require 'puppet/rails/host'
+        require 'puppet/storeconfigs/rails/host'
 
         # Stub this so we don't need access to the DB.
-        Puppet::Rails::Host.stubs(:columns).returns([column("name", "string"), column("environment", "string"), column("ip", "string")])
+        Puppet::Storeconfigs::Rails::Host.stubs(:columns).returns([column("name", "string"), column("environment", "string"), column("ip", "string")])
 
         @node = Puppet::Node.new("foo")
         @node.environment = "production"
@@ -24,48 +24,48 @@ describe "Puppet::Rails::Host" do
 
     describe "when converting a Puppet::Node instance into a Rails instance" do
         it "should modify any existing instance in the database" do
-            Puppet::Rails::Host.expects(:find_by_name).with("foo").returns @host
+            Puppet::Storeconfigs::Rails::Host.expects(:find_by_name).with("foo").returns @host
 
-            Puppet::Rails::Host.from_puppet(@node)
+            Puppet::Storeconfigs::Rails::Host.from_puppet(@node)
         end
 
         it "should create a new instance in the database if none can be found" do
-            Puppet::Rails::Host.expects(:find_by_name).with("foo").returns nil
-            Puppet::Rails::Host.expects(:new).with(:name => "foo").returns @host
+            Puppet::Storeconfigs::Rails::Host.expects(:find_by_name).with("foo").returns nil
+            Puppet::Storeconfigs::Rails::Host.expects(:new).with(:name => "foo").returns @host
 
-            Puppet::Rails::Host.from_puppet(@node)
+            Puppet::Storeconfigs::Rails::Host.from_puppet(@node)
         end
 
         it "should copy the environment from the Puppet instance" do
-            Puppet::Rails::Host.expects(:find_by_name).with("foo").returns @host
+            Puppet::Storeconfigs::Rails::Host.expects(:find_by_name).with("foo").returns @host
 
             @node.environment = "production"
             @host.expects(:environment=).with "production"
 
-            Puppet::Rails::Host.from_puppet(@node)
+            Puppet::Storeconfigs::Rails::Host.from_puppet(@node)
         end
 
         it "should copy the ipaddress from the Puppet instance" do
-            Puppet::Rails::Host.expects(:find_by_name).with("foo").returns @host
+            Puppet::Storeconfigs::Rails::Host.expects(:find_by_name).with("foo").returns @host
 
             @node.ipaddress = "192.168.0.1"
             @host.expects(:ip=).with "192.168.0.1"
 
-            Puppet::Rails::Host.from_puppet(@node)
+            Puppet::Storeconfigs::Rails::Host.from_puppet(@node)
         end
 
         it "should not save the Rails instance" do
-            Puppet::Rails::Host.expects(:find_by_name).with("foo").returns @host
+            Puppet::Storeconfigs::Rails::Host.expects(:find_by_name).with("foo").returns @host
 
             @host.expects(:save).never
 
-            Puppet::Rails::Host.from_puppet(@node)
+            Puppet::Storeconfigs::Rails::Host.from_puppet(@node)
         end
     end
 
-    describe "when converting a Puppet::Rails::Host instance into a Puppet::Node instance" do
+    describe "when converting a Puppet::Storeconfigs::Rails::Host instance into a Puppet::Node instance" do
         before do
-            @host = Puppet::Rails::Host.new(:name => "foo", :environment => "production", :ip => "127.0.0.1")
+            @host = Puppet::Storeconfigs::Rails::Host.new(:name => "foo", :environment => "production", :ip => "127.0.0.1")
             @node = Puppet::Node.new("foo")
             Puppet::Node.stubs(:new).with("foo").returns @node
         end
@@ -100,7 +100,7 @@ describe "Puppet::Rails::Host" do
             @dbresource2 = stub_everything 'dbres2'
             @dbresources = { 1 => @dbresource1, 2 => @dbresource2 }
 
-            @host = Puppet::Rails::Host.new(:name => "foo", :environment => "production", :ip => "127.0.0.1")
+            @host = Puppet::Storeconfigs::Rails::Host.new(:name => "foo", :environment => "production", :ip => "127.0.0.1")
             @host.stubs(:find_resources).returns(@dbresources)
             @host.stubs(:find_resources_parameters_tags)
             @host.stubs(:compare_to_catalog)
@@ -145,7 +145,7 @@ describe "Puppet::Rails::Host" do
             @dbresources = stub 'resources'
             @dbresources.stubs(:find).returns(@resources)
 
-            @host = Puppet::Rails::Host.new(:name => "foo", :environment => "production", :ip => "127.0.0.1")
+            @host = Puppet::Storeconfigs::Rails::Host.new(:name => "foo", :environment => "production", :ip => "127.0.0.1")
             @host.stubs(:resources).returns(@dbresources)
         end
 
