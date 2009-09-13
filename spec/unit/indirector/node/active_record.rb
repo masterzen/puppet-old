@@ -8,10 +8,12 @@ describe "Puppet::Node::ActiveRecord" do
     confine "Missing Rails" => Puppet.features.rails?
     before do 
         require 'puppet/indirector/node/active_record'
+        Puppet.features.stubs(:rails?).returns true
+        Puppet::Storeconfigs.stubs(:init)
     end
 
-    it "should be a subclass of the ActiveRecord terminus class" do
-        Puppet::Node::ActiveRecord.ancestors.should be_include(Puppet::Indirector::ActiveRecord)
+    it "should be a subclass of the Storeconfigs terminus class" do
+        Puppet::Node::ActiveRecord.ancestors.should be_include(Puppet::Indirector::Storeconfigs)
     end
 
     it "should use Puppet::Storeconfigs::Rails::Host as its ActiveRecord model" do

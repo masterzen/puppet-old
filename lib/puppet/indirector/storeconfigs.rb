@@ -1,6 +1,6 @@
 require 'puppet/indirector'
 
-class Puppet::Indirector::ActiveRecord < Puppet::Indirector::Terminus
+class Puppet::Indirector::Storeconfigs < Puppet::Indirector::Terminus
     class << self
         attr_accessor :ar_model
     end
@@ -14,7 +14,7 @@ class Puppet::Indirector::ActiveRecord < Puppet::Indirector::Terminus
     end
 
     def initialize
-        Puppet::Storeconfigs::Rails.init
+        Puppet::Storeconfigs.init
     end
 
     def find(request)

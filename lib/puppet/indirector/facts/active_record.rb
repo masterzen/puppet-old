@@ -1,9 +1,9 @@
 require 'puppet/storeconfigs/rails/fact_name'
 require 'puppet/storeconfigs/rails/fact_value'
 require 'puppet/storeconfigs/rails/host'
-require 'puppet/indirector/active_record'
+require 'puppet/indirector/storeconfigs'
 
-class Puppet::Node::Facts::ActiveRecord < Puppet::Indirector::ActiveRecord
+class Puppet::Node::Facts::ActiveRecord < Puppet::Indirector::Storeconfigs
     use_ar_model Puppet::Storeconfigs::Rails::Host
 
     # Find the Rails host and pull its facts as a Facts instance.
