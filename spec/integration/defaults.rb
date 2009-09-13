@@ -93,8 +93,12 @@ describe "Puppet defaults" do
         Puppet.settings.value(:preferred_serialization_format).should == "pson"
     end
 
-    describe "when enabling storeconfigs" do
+    describe "when enabling storeconfigs with rails" do
         before do
+            Puppet.settings.stubs(:value).with(:storeconfigs_source).returns "rails"
+            Puppet.settings.stubs(:value).with(:async_storeconfigs).returns false
+
+            Puppet::Storeconfigs.stubs(:source=)
             Puppet::Resource::Catalog.stubs(:cache_class=)
             Puppet::Node::Facts.stubs(:cache_class=)
             Puppet::Node.stubs(:cache_class=)
@@ -130,6 +134,51 @@ describe "Puppet defaults" do
 
         it "should fail if rails is not available" do
             Puppet.features.stubs(:rails?).returns false
+            lambda { Puppet.settings[:storeconfigs] = true }.should raise_error
+        end
+    end
+
+    describe "when enabling storeconfigs with tokyo_storage" do
+        before do
+            Puppet.settings.stubs(:value).with(:storeconfigs_source).returns "tokyo_storage"
+            Puppet.settings.stubs(:value).with(:async_storeconfigs).returns false
+
+            Puppet::Storeconfigs.stubs(:source=)
+            Puppet::Resource::Catalog.stubs(:cache_class=)
+            Puppet::Node::Facts.stubs(:cache_class=)
+            Puppet::Node.stubs(:cache_class=)
+
+            Puppet.features.stubs(:tokyo_storage?).returns true
+        end
+
+        it "should set the Storeconfigs proxy to :tokyo_storage" do
+            Puppet::Storeconfigs.expects(:source=).with(:tokyo_storage)
+            Puppet.settings[:storeconfigs] = true
+        end
+
+        it "should set the Catalog cache class to :tokyo_storage" do
+            Puppet::Resource::Catalog.expects(:cache_class=).with(:tokyo_storage)
+            Puppet.settings[:storeconfigs] = true
+        end
+
+        it "should not set the Catalog cache class to :tokyo_storage if asynchronous storeconfigs is enabled" do
+            Puppet::Resource::Catalog.expects(:cache_class=).with(:tokyo_storage).never
+            Puppet.settings.expects(:value).with(:async_storeconfigs).returns true
+            Puppet.settings[:storeconfigs] = true
+        end
+
+        it "should set the Facts cache class to :tokyo_storage" do
+            Puppet::Node::Facts.expects(:cache_class=).with(:tokyo_storage)
+            Puppet.settings[:storeconfigs] = true
+        end
+
+        it "should set the Node cache class to :tokyo_storage" do
+            Puppet::Node.expects(:cache_class=).with(:tokyo_storage)
+            Puppet.settings[:storeconfigs] = true
+        end
+
+        it "should fail if tokyo_storage is not available" do
+            Puppet.features.stubs(:tokyo_storage?).returns false
             lambda { Puppet.settings[:storeconfigs] = true }.should raise_error
         end
     end
