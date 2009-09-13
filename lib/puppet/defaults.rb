@@ -742,23 +742,29 @@ module Puppet
     )
 
     setdefaults(:puppetmasterd,
-        :storeconfigs => {:default => false, :desc => "Whether to store each client's configuration.  This
-            requires ActiveRecord from Ruby on Rails.",
-            :call_on_define => true, # Call our hook with the default value, so we always get the libdir set.
-            :hook => proc do |value|
-                require 'puppet/storeconfigs'
-                require 'puppet/node'
-                require 'puppet/node/facts'
-                require 'puppet/resource/catalog'
-                if value
-                    raise "StoreConfigs not supported without ActiveRecord 2.1 or higher" unless Puppet.features.rails?
-                    Puppet::Storeconfigs.source = :rails
-                    Puppet::Resource::Catalog.cache_class = :active_record unless Puppet.settings[:async_storeconfigs]
-                    Puppet::Node::Facts.cache_class = :active_record
-                    Puppet::Node.cache_class = :active_record
+        :storeconfigs => {:default => false, :desc => "Whether to store each client's configuration. Which backend is used
+            to store the configuration is set with the storeconfigs_source setting. The default being Active Record from Rails",
+            :call_on_define => true, # Call our hook with the default value, so we always get the various terminus set.
+            :hook =>
+                proc do |value|
+                    if value
+                        require 'puppet/storeconfigs'
+                        require 'puppet/node'
+                        require 'puppet/node/facts'
+                        require 'puppet/resource/catalog'
+
+                        case Puppet.settings[:storeconfigs_source]
+                        when "rails"
+                            raise "StoreConfigs not supported without ActiveRecord 2.1 or higher" unless Puppet.features.rails?
+                            Puppet::Storeconfigs.source = :rails
+                            Puppet::Resource::Catalog.cache_class = :active_record unless Puppet.settings[:async_storeconfigs]
+                            Puppet::Node::Facts.cache_class = :active_record
+                            Puppet::Node.cache_class = :active_record
+                        end
+                    end
                 end
-            end
-        }
+        },
+        :storeconfigs_source => { :default => "rails", :desc => "what subsystem to use to for storeconfigs" }
     )
 
     # This doesn't actually work right now.
