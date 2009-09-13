@@ -10,15 +10,15 @@ describe "Puppet::Node::Facts::ActiveRecord" do
     before do
         require 'puppet/indirector/facts/active_record'
         Puppet.features.stubs(:rails?).returns true
-        Puppet::Storeconfigs::Rails.stubs(:init)
+        Puppet::Storeconfigs.stubs(:init)
         @terminus = Puppet::Node::Facts::ActiveRecord.new
     end
 
-    it "should be a subclass of the ActiveRecord terminus class" do
-        Puppet::Node::Facts::ActiveRecord.ancestors.should be_include(Puppet::Indirector::ActiveRecord)
+    it "should be a subclass of the Storeconfigs terminus class" do
+        Puppet::Node::Facts::ActiveRecord.ancestors.should be_include(Puppet::Indirector::Storeconfigs)
     end
 
-    it "should use Puppet::Storeconfigs::Rails::Host as its ActiveRecord model" do
+    it "should use Puppet::Storeconfigs::Rails::Host as its Storeconfigs model" do
         Puppet::Node::Facts::ActiveRecord.ar_model.should equal(Puppet::Storeconfigs::Rails::Host)
     end
 

@@ -2,18 +2,18 @@
 
 require File.dirname(__FILE__) + '/../../spec_helper'
 
-require 'puppet/indirector/active_record'
+require 'puppet/indirector/storeconfigs'
 
-describe Puppet::Indirector::ActiveRecord do
+describe Puppet::Indirector::Storeconfigs do
     before do
-        Puppet::Storeconfigs::Rails.stubs(:init)
+        Puppet::Storeconfigs.stubs(:init)
 
         Puppet::Indirector::Terminus.stubs(:register_terminus_class)
         @model = mock 'model'
         @indirection = stub 'indirection', :name => :mystuff, :register_terminus_type => nil, :model => @model
         Puppet::Indirector::Indirection.stubs(:instance).returns(@indirection)
 
-        @active_record_class = Class.new(Puppet::Indirector::ActiveRecord) do
+        @storeconfigs_class = Class.new(Puppet::Indirector::Storeconfigs) do
             def self.to_s
                 "Mystuff::Testing"
             end
@@ -21,8 +21,8 @@ describe Puppet::Indirector::ActiveRecord do
 
         @ar_model = mock 'ar_model'
 
-        @active_record_class.use_ar_model @ar_model
-        @terminus = @active_record_class.new
+        @storeconfigs_class.use_ar_model @ar_model
+        @terminus = @storeconfigs_class.new
 
         @name = "me"
         @instance = stub 'instance', :name => @name
@@ -31,14 +31,14 @@ describe Puppet::Indirector::ActiveRecord do
     end
 
     it "should allow declaration of an ActiveRecord model to use" do
-        @active_record_class.use_ar_model "foo"
-        @active_record_class.ar_model.should == "foo"
+        @storeconfigs_class.use_ar_model "foo"
+        @storeconfigs_class.ar_model.should == "foo"
     end
 
     describe "when initializing" do
         it "should init Rails" do
-            Puppet::Storeconfigs::Rails.expects(:init)
-            @active_record_class.new
+            Puppet::Storeconfigs.expects(:init)
+            @storeconfigs_class.new
         end
     end
 
@@ -64,11 +64,11 @@ describe Puppet::Indirector::ActiveRecord do
     end
 
     describe "when saving an instance" do
-        it "should use the ActiveRecord model to convert the instance into a Rails object and then save that rails object" do
-            rails_object = mock 'rails_object'
-            @ar_model.expects(:from_puppet).with(@instance).returns rails_object
+        it "should use the Storeconfigs model to convert the instance into a Rails object and then save that rails object" do
+            storeconfigs_object = mock 'storeconfigs_object'
+            @ar_model.expects(:from_puppet).with(@instance).returns storeconfigs_object
 
-            rails_object.expects(:save)
+            storeconfigs_object.expects(:save)
 
             @terminus.save(@request)
         end
