@@ -102,6 +102,11 @@ describe "Puppet defaults" do
             Puppet.features.stubs(:rails?).returns true
         end
 
+        it "should set the Storeconfigs proxy to :rails" do
+            Puppet::Storeconfigs.expects(:source=).with(:rails)
+            Puppet.settings[:storeconfigs] = true
+        end
+
         it "should set the Catalog cache class to :active_record" do
             Puppet::Resource::Catalog.expects(:cache_class=).with(:active_record)
             Puppet.settings[:storeconfigs] = true
