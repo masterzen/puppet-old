@@ -665,6 +665,20 @@ module Puppet
             and other environments normally use ``debug``."]
     )
 
+    self.setdefaults(:tokyo_storage,
+        :tklocation => { :default => "$statedir/clientconfigs.tct",
+            :mode => 0660,
+            :owner => "service",
+            :group => "service",
+            :desc => "The Tokyo Cabinet file for client configurations (should end with .tct)"
+        },
+        :tkoption => [ "", "The Tokyo Cabinet options" ],
+        :tkserver => [ "localhost", "The Tokyo Tyrant database server for Client caching. Only
+            used when networked databases are used."],
+        :tkport => [ "1234", "The Tokyo Tyrant database port"],
+        :tkadapter => [ "cabinet", "The type of database to use (either cabinet or tyrant)." ]
+    )
+
     setdefaults(:transaction,
         :tags => ["", "Tags to use to find resources.  If this is set, then
             only resources tagged with the specified tags will be applied.
@@ -760,11 +774,26 @@ module Puppet
                             Puppet::Resource::Catalog.cache_class = :active_record unless Puppet.settings[:async_storeconfigs]
                             Puppet::Node::Facts.cache_class = :active_record
                             Puppet::Node.cache_class = :active_record
+                        when "tokyo_storage"
+                            raise "StoreConfigs not supported without Tokyo Cabinet/Tyrant" unless Puppet.features.tokyo_storage?
+                            Puppet::Storeconfigs.source = :tokyo_storage
+                            Puppet::Resource::Catalog.cache_class = :tokyo_storage unless Puppet.settings[:async_storeconfigs]
+                            Puppet::Node::Facts.cache_class = :tokyo_storage
+                            Puppet::Node.cache_class = :tokyo_storage
                         end
                     end
                 end
         },
-        :storeconfigs_source => { :default => "rails", :desc => "what subsystem to use to for storeconfigs" }
+        :storeconfigs_source => { :default => "rails", :desc => "what subsystem to use to for storeconfigs. Valid values are either rails or tokyo_storage",
+            :hook =>
+                proc do |value|
+                    case value
+                    when "rails","tokyo_storage"
+                    else
+                        raise Puppet::Error, "#{value} is not a valid storeconfigs_source. Valid values are rails or tokyo_storage"
+                    end
+                end
+        }
     )
 
     # This doesn't actually work right now.
