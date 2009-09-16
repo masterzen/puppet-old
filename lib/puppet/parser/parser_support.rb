@@ -98,10 +98,14 @@ class Puppet::Parser::Parser
         end
     end
 
-    [:hostclass, :definition, :node, :nodes?].each do |method|
+    [:hostclass, :definition, :nodes?].each do |method|
         define_method(method) do |*args|
             @loaded_code.send(method, *args)
         end
+    end
+
+    def node(name)
+        @loaded_code.node_matching(name)
     end
 
     def find_hostclass(namespace, name)
@@ -376,7 +380,7 @@ class Puppet::Parser::Parser
         doc = lexer.getcomment
         names.collect do |name|
             name = AST::HostName.new :value => name unless name.is_a?(AST::HostName)
-            if other = @loaded_code.node(name)
+            if other = @loaded_code.node_named(name)
                 error("Node %s is already defined at %s:%s; cannot redefine" % [other.name, other.file, other.line])
             end
             name = name.to_s if name.is_a?(Symbol)

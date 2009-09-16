@@ -22,7 +22,7 @@ class Puppet::Parser::LoadedCode
         @nodes[name] = code
     end
 
-    def node(name)
+    def node_matching(name)
         name = check_name(name)
 
         if node = @nodes[name]
@@ -30,10 +30,13 @@ class Puppet::Parser::LoadedCode
         end
 
         @node_list.each do |nodename|
-            n = @nodes[nodename]
-            return n if nodename.regex? and nodename.match(name)
+            return @nodes[nodename] if nodename.regex? and nodename.match(name)
         end
         nil
+    end
+
+    def node_named(name)
+        @nodes[check_name(name)]
     end
 
     def nodes?

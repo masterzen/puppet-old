@@ -253,7 +253,7 @@ describe Puppet::Parser do
         end
 
         it "should raise an error if the node already exists" do
-            @loaded_code.stubs(:node).with(@nodename).returns(@node)
+            @loaded_code.stubs(:node_named).with(@nodename).returns(@node)
 
             lambda { @parser.newnode(@nodename) }.should raise_error
         end
@@ -291,7 +291,7 @@ describe Puppet::Parser do
 
     describe "when retrieving a specific node" do
         it "should delegate to the loaded_code node" do
-            @loaded_code.expects(:node).with("node")
+            @loaded_code.expects(:node_matching).with("node")
 
             @parser.node("node")
         end

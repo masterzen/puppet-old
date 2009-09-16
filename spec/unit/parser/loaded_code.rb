@@ -5,7 +5,7 @@ require File.dirname(__FILE__) + '/../../spec_helper'
 require 'puppet/parser/loaded_code'
 
 describe Puppet::Parser::LoadedCode do
-    %w{hostclass node definition}.each do |data|
+    { "hostclass" => "hostclass", "node" => "node_matching",  "definition" => "definition" }.each do |data, method|
         it "should have a method for adding a #{data}" do
             Puppet::Parser::LoadedCode.new.should respond_to("add_" + data)
         end
@@ -13,17 +13,17 @@ describe Puppet::Parser::LoadedCode do
         it "should be able to retrieve #{data} by name" do
             loader = Puppet::Parser::LoadedCode.new
             loader.send("add_" + data, "foo", "bar")
-            loader.send(data, "foo").should == "bar"
+            loader.send(method, "foo").should == "bar"
         end
 
         it "should retrieve #{data} insensitive to case" do
             loader = Puppet::Parser::LoadedCode.new
             loader.send("add_" + data, "Foo", "bar")
-            loader.send(data, "fOo").should == "bar"
+            loader.send(method, "fOo").should == "bar"
         end
 
         it "should return nil when asked for a #{data} that has not been added" do
-            Puppet::Parser::LoadedCode.new.send(data, "foo").should be_nil
+            Puppet::Parser::LoadedCode.new.send(method, "foo").should be_nil
         end
 
         it "should be able to retrieve all #{data}s" do
@@ -140,7 +140,7 @@ describe Puppet::Parser::LoadedCode do
         it "should create an HostName if nodename is a string" do
             Puppet::Parser::AST::HostName.expects(:new).with(:value => "foo")
 
-            @loader.node("foo")
+            @loader.node_matching("foo")
         end
 
         it "should not create an HostName if nodename is an HostName" do
@@ -148,7 +148,7 @@ describe Puppet::Parser::LoadedCode do
 
             Puppet::Parser::AST::HostName.expects(:new).with(:value => "foo").never
 
-            @loader.node(name)
+            @loader.node_matching(name)
         end
 
         it "should be able to find node by HostName" do
@@ -156,7 +156,24 @@ describe Puppet::Parser::LoadedCode do
             nameout = Puppet::Parser::AST::HostName.new(:value => "foo")
 
             @loader.add_node(namein, "bar")
-            @loader.node(nameout) == "bar"
+            @loader.node_matching(nameout).should == "bar"
+        end
+
+        it "should be able to find node by HostName strict equality" do
+            namein = Puppet::Parser::AST::HostName.new(:value => "foo")
+            nameout = Puppet::Parser::AST::HostName.new(:value => "foo")
+
+            @loader.add_node(namein, "bar")
+            @loader.node_named(nameout).should == "bar"
+        end
+
+        it "should not use node name matching when finding with strict node HostName" do
+            name1 = Puppet::Parser::AST::HostName.new(:value => "foo")
+            name2 = Puppet::Parser::AST::HostName.new(:value => Puppet::Parser::AST::Regex.new(:value => /foo/))
+
+            @loader.add_node(name1, "bar")
+            @loader.add_node(name2, "baz")
+            @loader.node_named(name1).should == "bar"
         end
 
         it "should return the first matching regex nodename" do
@@ -168,7 +185,7 @@ describe Puppet::Parser::LoadedCode do
             @loader.add_node(@nodename1, @node1)
             @loader.add_node(@nodename2, @node2)
 
-            @loader.node("test").should == @node1
+            @loader.node_matching("test").should == @node1
         end
 
         it "should not scan non-regex node" do
@@ -180,7 +197,7 @@ describe Puppet::Parser::LoadedCode do
             @loader.add_node(@nodename1,@node1)
             @loader.add_node(@nodename2,@node2)
 
-            @loader.node("test")
+            @loader.node_matching("test")
         end
 
         it "should prefer non-regex nodes to regex nodes" do
@@ -192,7 +209,7 @@ describe Puppet::Parser::LoadedCode do
             @loader.add_node(@nodename1,@node1)
             @loader.add_node(@nodename2,@node2)
 
-            @loader.node(@nodename1)
+            @loader.node_matching(@nodename1)
         end
     end
 end
