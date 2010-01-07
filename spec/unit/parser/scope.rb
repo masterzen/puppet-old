@@ -11,6 +11,17 @@ describe Puppet::Parser::Scope do
         @scope.parent = @topscope
     end
 
+    it "should get its environment from its compiler" do
+        env = stub 'environment'
+        compiler = stub 'compiler', :environment => env
+        scope = Puppet::Parser::Scope.new :compiler => compiler
+        scope.environment.should equal(env)
+    end
+
+    it "should use the resource type collection helper to find its known resource types" do
+        Puppet::Parser::Scope.ancestors.should include(Puppet::Parser::ResourceTypeCollectionHelper)
+    end
+
     describe "when looking up a variable" do
         it "should default to an empty string" do
             @scope.lookupvar("var").should == ""
@@ -42,14 +53,17 @@ describe Puppet::Parser::Scope do
 
         describe "and the variable is qualified" do
             before do
-                @parser = Puppet::Parser::Parser.new()
-                @compiler = Puppet::Parser::Compiler.new(stub("node", :name => "foonode", :classes => []), @parser)
+                @compiler = Puppet::Parser::Compiler.new(Puppet::Node.new("foonode"))
                 @scope.compiler = @compiler
-                @scope.parser = @parser
+                @known_resource_types = @scope.known_resource_types
+            end
+
+            def newclass(name)
+                @known_resource_types.add Puppet::Parser::ResourceType.new(:hostclass, name)
             end
 
             def create_class_scope(name)
-                klass = @parser.newclass(name)
+                klass = newclass(name)
                 Puppet::Parser::Resource.new(:type => "class", :title => name, :scope => @scope, :source => mock('source')).evaluate
 
                 return @compiler.class_scope(klass)
@@ -86,7 +100,7 @@ describe Puppet::Parser::Scope do
             end
 
             it "should warn and return an empty string for qualified variables whose classes have not been evaluated" do
-                klass = @parser.newclass("other::deep::klass")
+                klass = newclass("other::deep::klass")
                 @scope.expects(:warning)
                 @scope.lookupvar("other::deep::klass::var").should == ""
             end
@@ -103,7 +117,7 @@ describe Puppet::Parser::Scope do
 
             it "should return ':undefined' when asked for a non-string qualified variable from a class that has not been evaluated" do
                 @scope.stubs(:warning)
-                klass = @parser.newclass("other::deep::klass")
+                klass = newclass("other::deep::klass")
                 @scope.lookupvar("other::deep::klass::var", false).should == :undefined
             end
         end
