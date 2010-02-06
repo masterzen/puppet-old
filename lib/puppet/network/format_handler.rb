@@ -23,7 +23,7 @@ module Puppet::Network::FormatHandler
             @format = format
         end
 
-        [:intern, :intern_multiple, :render, :render_multiple, :mime].each do |method|
+        [:intern, :intern_multiple, :render, :render_multiple, :mime, :support_stream?].each do |method|
             define_method(method) do |*args|
                 protect(method, args)
             end
@@ -93,12 +93,21 @@ module Puppet::Network::FormatHandler
             Puppet::Network::FormatHandler
         end
 
+        def decapsulate(format, data)
+            format = format_handler.protected_format(format)
+
+            data = data.content if !format.support_stream? and data.respond_to?(:stream?) and data.stream?
+            [format, data]
+        end
+
         def convert_from(format, data)
-            format_handler.protected_format(format).intern(self, data)
+            format, data = decapsulate(format, data)
+            format.intern(self, data)
         end
 
         def convert_from_multiple(format, data)
-            format_handler.protected_format(format).intern_multiple(self, data)
+            format, data = decapsulate(format, data)
+            format.intern_multiple(self, data)
         end
 
         def render_multiple(format, instances)
@@ -111,6 +120,10 @@ module Puppet::Network::FormatHandler
 
         def support_format?(name)
             Puppet::Network::FormatHandler.format(name).supported?(self)
+        end
+
+        def support_stream?(name)
+            Puppet::Network::FormatHandler.format(name).support_stream?
         end
 
         def supported_formats
@@ -163,6 +176,10 @@ module Puppet::Network::FormatHandler
 
         def support_format?(name)
             self.class.support_format?(name)
+        end
+
+        def support_stream?(name)
+            self.class.support_stream?(name)
         end
     end
 end

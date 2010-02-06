@@ -117,6 +117,7 @@ describe Puppet::Network::FormatHandler do
             @format = mock 'format'
             @format.stubs(:supported?).returns true
             @format.stubs(:name).returns :my_format
+            @format.stubs(:support_stream?).returns false
             Puppet::Network::FormatHandler.stubs(:format).with(:my_format).returns @format
             Puppet::Network::FormatHandler.stubs(:mime).with("text/myformat").returns @format
             Puppet::Network::Format.stubs(:===).returns false
@@ -132,6 +133,15 @@ describe Puppet::Network::FormatHandler do
             FormatTester.support_format?(:my_format)
         end
 
+        it "should be able to test whether a format supports streaming" do
+            FormatTester.should respond_to(:support_stream?)
+        end
+
+        it "should use the Format to determine whether a given format supports streaming" do
+            @format.expects(:support_stream?)
+            FormatTester.support_stream?(:my_format)
+        end
+
         it "should be able to convert from a given format" do
             FormatTester.should respond_to(:convert_from)
         end
@@ -139,6 +149,29 @@ describe Puppet::Network::FormatHandler do
         it "should call the format-specific converter when asked to convert from a given format" do
             @format.expects(:intern).with(FormatTester, "mydata")
             FormatTester.convert_from(:my_format, "mydata")
+        end
+
+        it "should not decapsulate the content when converting with a format that supports stream" do
+            data = stub_everything 'data'
+            data.expects(:content).never
+            @format.expects(:support_stream?).returns(true)
+            @format.expects(:intern).with(FormatTester, data)
+            FormatTester.convert_from(:my_format, data)
+        end
+
+        it "should not decapsulate the content when converting streamable data" do
+            data = stub_everything 'data', :stream? => true
+            data.expects(:content).never
+            @format.expects(:support_stream?).returns(true)
+            @format.expects(:intern).with(FormatTester, data)
+            FormatTester.convert_from(:my_format, data)
+        end
+
+        it "should decapsulate the content when converting streamable data with a non streamable format" do
+            data = stub_everything 'data', :stream? => true
+            data.expects(:content).returns("mydata")
+            @format.expects(:intern).with(FormatTester, "mydata")
+            FormatTester.convert_from(:my_format, data)
         end
 
         it "should call the format-specific converter when asked to convert from a given format by mime-type" do

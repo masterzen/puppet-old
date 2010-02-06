@@ -89,6 +89,10 @@ class Puppet::Network::Format
         suitable? and required_methods_present?(klass)
     end
 
+    def support_stream?
+        false
+    end
+
     def to_s
         "Puppet::Network::Format[%s]" % name
     end

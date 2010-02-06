@@ -66,6 +66,10 @@ describe Puppet::Network::Format do
             @format.should respond_to(:supported?)
         end
 
+        it "should be able to tell it supports streaming" do
+            @format.should respond_to(:support_stream?)
+        end
+
         it "should consider a class to be supported if it has the individual and multiple methods for rendering and interning" do
             @format.should be_supported(FormatRenderer)
         end
