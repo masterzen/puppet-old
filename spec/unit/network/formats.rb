@@ -18,11 +18,15 @@ class PsonTest
         @string = string
     end
 
-    def to_pson(*args)
+    def to_pson_data_hash
         {
             'type' => self.class.name,
             'data' => @string
-        }.to_pson(*args)
+        }
+    end
+
+    def to_pson(*args)
+        to_pson_data_hash.to_pson(*args)
     end
 end
 
@@ -359,6 +363,104 @@ describe "Puppet Network Format" do
                 PsonTest.expects(:from_pson).with("bar").returns "BAR"
                 PsonTest.expects(:from_pson).with("baz").returns "BAZ"
                 @pson.intern_multiple(PsonTest, text).should == %w{BAR BAZ}
+            end
+        end
+    end
+
+
+    it "should include a yajl format" do
+        Puppet::Network::FormatHandler.format(:yajl).should_not be_nil
+    end
+
+    describe "yajl" do
+        confine "Missing 'yajl' library" => Puppet.features.yajl?
+
+        before do
+            @yajl = Puppet::Network::FormatHandler.format(:yajl)
+        end
+
+        it "should have its mime type set to text/yajl" do
+            Puppet::Network::FormatHandler.format(:yajl).mime.should == "text/yajl"
+        end
+
+        it "should require the :render_method" do
+            Puppet::Network::FormatHandler.format(:yajl).required_methods.should be_include(:render_method)
+        end
+
+        it "should require the :intern_method" do
+            Puppet::Network::FormatHandler.format(:yajl).required_methods.should be_include(:intern_method)
+        end
+
+        it "should have the default weight" do
+            @yajl.weight.should == 5
+        end
+
+        describe "when supported" do
+            it "should render by calling 'to_pson_data_hash' on the instance" do
+                instance = PsonTest.new("foo")
+                instance.expects(:to_pson_data_hash).returns "foo"
+                @yajl.render(instance).should == "\"foo\""
+            end
+
+            it "should render multiple instances by calling 'to_pson_data_hash' on each element array" do
+                instance = mock "instance"
+                instances = [instance]
+
+                instance.expects(:to_pson_data_hash).returns "foo"
+
+                @yajl.render_multiple(instances).should == "\"foo\""
+            end
+
+            it "should intern by calling 'Yajl::Parser.parse' on the text and then using from_pson to convert the data into an instance" do
+                content = stub 'foo', :stream? => false, :content => "foo"
+                Yajl::Parser.expects(:parse).with("foo").returns("type" => "PsonTest", "data" => "foo")
+                PsonTest.expects(:from_pson).with("foo").returns "parsed_yajl"
+                @yajl.intern(PsonTest, content).should == "parsed_yajl"
+            end
+
+            it "should intern by calling 'Yajl::Parser.parse' in stream mode if content is streamable" do
+                content = stub 'foo', :stream? => true
+                content.expects(:stream).yields "foo"
+                parser = stub_everything 'parser'
+                Yajl::Parser.expects(:new).returns(parser)
+                parser.expects(:<<).with("foo").returns("type" => "PsonTest", "data" => "foo")
+                @yajl.intern(PsonTest, content)
+            end
+
+            it "should return parsed objects in stream mode" do
+                content = stub 'foo', :stream? => true
+                content.stubs(:stream).yields "foo"
+                parsing_complete = stub 'parsing_complete'
+                parsing_complete.expects(:method)
+                Puppet::ParsingComplete.expects(:new).returns(parsing_complete)
+                parser = stub_everything 'parser'
+                Yajl::Parser.expects(:new).returns(parser)
+                parser.expects(:<<).with("foo").returns("type" => "PsonTest", "data" => "foo")
+                parsing_complete.expects(:result).returns([])
+                @yajl.intern(PsonTest, content)
+            end
+
+            it "should not render twice if 'Yajl::Parser.parse' creates the appropriate instance" do
+                text = stub 'foo', :stream? => false, :content => "foo"
+                instance = PsonTest.new("foo")
+                Yajl::Parser.expects(:parse).with("foo").returns(instance)
+                PsonTest.expects(:from_pson).never
+                @yajl.intern(PsonTest, text).should equal(instance)
+            end
+
+            it "should intern by calling 'Yajl::Parser.parse' on the text and then using from_pson to convert the actual into an instance if the yajl has no class/data separation" do
+                text = stub 'foo', :stream? => false, :content => "foo"
+                Yajl::Parser.expects(:parse).with("foo").returns("foo")
+                PsonTest.expects(:from_pson).with("foo").returns "parsed_yajl"
+                @yajl.intern(PsonTest, text).should == "parsed_yajl"
+            end
+
+            it "should intern multiples by parsing the text and using 'class.intern' on each resulting data structure" do
+                text = stub 'foo', :stream? => false, :content => "foo"
+                Yajl::Parser.expects(:parse).with("foo").returns ["bar", "baz"]
+                PsonTest.expects(:from_pson).with("bar").returns "BAR"
+                PsonTest.expects(:from_pson).with("baz").returns "BAZ"
+                @yajl.intern_multiple(PsonTest, text).should == %w{BAR BAZ}
             end
         end
     end

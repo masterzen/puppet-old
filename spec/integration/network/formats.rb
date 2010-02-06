@@ -18,11 +18,15 @@ class PsonIntTest
         @string = string
     end
 
-    def to_pson(*args)
+    def to_pson_data_hash
         {
             'type' => self.class.name,
             'data' => [@string]
-        }.to_pson(*args)
+        }
+    end
+
+    def to_pson(*args)
+        to_pson_data_hash.to_pson(*args)
     end
 
     def self.canonical_order(s)
@@ -103,6 +107,80 @@ describe Puppet::Network::FormatHandler.format(:pson) do
 
         it "should be able to intern multiple instances from pson with no class information" do
             @pson.intern_multiple(PsonIntTest, '[["one"],["two"]]').should == [
+                PsonIntTest.new("one"), PsonIntTest.new("two")
+            ]
+        end
+    end
+end
+
+describe Puppet::Network::FormatHandler.format(:yajl) do
+    describe "when yajl is absent" do
+        confine "'yajl' library is present" => (! Puppet.features.yajl?)
+
+        before do
+            @yajl = Puppet::Network::FormatHandler.format(:yajl)
+        end
+
+        it "should not be suitable" do
+            @yajl.should_not be_suitable
+        end
+
+        it "should not be supported" do
+            @yajl.should_not be_supported
+        end
+    end
+
+    describe "when yajl is available" do
+        confine "Missing 'yajl' library" => Puppet.features.yajl?
+
+        before do
+            @yajl = Puppet::Network::FormatHandler.format(:yajl)
+        end
+
+        it "should be able to render an instance to json" do
+            instance = PsonIntTest.new("foo")
+            PsonIntTest.canonical_order(@yajl.render(instance)).should == PsonIntTest.canonical_order('{"type":"PsonIntTest","data":["foo"]}' )
+        end
+
+        it "should be able to render arrays to json" do
+            @yajl.render([1,2]).should == '[1,2]'
+        end
+
+        it "should be able to render arrays containing hashes to json" do
+            @yajl.render([{"one"=>1},{"two"=>2}]).should == '[{"one":1},{"two":2}]'
+        end
+
+        it "should be able to render multiple instances to json" do
+            Puppet.features.add(:yajl, :libs => %w{yajl})
+
+            one = PsonIntTest.new("one")
+            two = PsonIntTest.new("two")
+
+            PsonIntTest.canonical_order(@yajl.render([one,two])).should == PsonIntTest.canonical_order('[{"type":"PsonIntTest","data":["one"]},{"type":"PsonIntTest","data":["two"]}]')
+        end
+
+        it "should be able to intern a stream" do
+            content = stub 'stream', :stream? => true
+            content.expects(:stream).multiple_yields('{"type":"PsonIntTest",', '"data":["foo"]}')
+            @yajl.intern(PsonIntTest, content).should == PsonIntTest.new("foo")
+        end
+
+        it "should be able to intern json into an instance" do
+            @yajl.intern(PsonIntTest, '{"type":"PsonIntTest","data":["foo"]}').should == PsonIntTest.new("foo")
+        end
+
+        it "should be able to intern json with no class information into an instance" do
+            @yajl.intern(PsonIntTest, '["foo"]').should == PsonIntTest.new("foo")
+        end
+
+        it "should be able to intern multiple instances from json" do
+            @yajl.intern_multiple(PsonIntTest, '[{"type": "PsonIntTest", "data": ["one"]},{"type": "PsonIntTest", "data": ["two"]}]').should == [
+                PsonIntTest.new("one"), PsonIntTest.new("two")
+            ]
+        end
+
+        it "should be able to intern multiple instances from json with no class information" do
+            @yajl.intern_multiple(PsonIntTest, '[["one"],["two"]]').should == [
                 PsonIntTest.new("one"), PsonIntTest.new("two")
             ]
         end

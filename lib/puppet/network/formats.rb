@@ -186,3 +186,111 @@ Puppet::Network::FormatHandler.create(:pson, :mime => "text/pson", :weight => 10
         klass.from_pson(data)
     end
 end
+
+Puppet::Network::FormatHandler.create(:yajl, :mime => "text/yajl") do
+    confine :true => Puppet.features.yajl?
+
+    class Puppet::ParsingComplete
+        attr_accessor :result
+
+        def initialize
+            @result = []
+        end
+
+        def complete(object)
+            @result << object
+        end
+    end
+
+    module ::PSON
+        alias :old_parse :parse
+        def parse(string)
+            Yajl::Parser.parse(string)
+        end
+    end
+
+    def parse(content)
+        if content.respond_to?(:stream?)
+            unless content.stream?
+                Yajl::Parser.parse(content.content)
+            else
+                complete = Puppet::ParsingComplete.new
+                parser = Yajl::Parser.new
+                parser.on_parse_complete = complete.method(:complete)
+                content.stream do |r|
+                    parser << r
+                end
+                result = complete.result
+                return result.shift if result.size == 1
+                result
+            end
+        else
+            Yajl::Parser.parse(content)
+        end
+    end
+
+    def intern(klass, content)
+        data_to_instance(klass, parse(content))
+    end
+
+    def intern_multiple(klass, content)
+        parse(content).collect do |data|
+            data_to_instance(klass, data)
+        end
+    end
+
+    def render(instance)
+        Yajl::Encoder.encode(instance_to_data(instance))
+    end
+
+    def render_multiple(instances)
+        out = ""
+        encoder = Yajl::Encoder.new
+        instances.collect do |i|
+            out << encoder.encode(instance_to_data(i))
+        end
+        out
+    end
+
+    # supported only for brave souls installing yajl
+    def supported?(klass)
+        Puppet.features.yajl?
+    end
+
+    def support_stream?
+        # of course we do
+        true
+    end
+
+    # If they pass class information, we want to ignore it.  By default,
+    # we'll include class information but we won't rely on it - we don't
+    # want class names to be required because we then can't change our
+    # internal class names, which is bad.
+    def data_to_instance(klass, data)
+        if data.is_a?(Hash) and d = data['data']
+            data = d
+        end
+        if data.is_a?(klass)
+            return data
+        end
+        klass.from_pson(data)
+    end
+
+    # recursively call to_pson_data_hash on objects
+    # supporting it
+    def instance_to_data(instance)
+        instance = instance.to_pson_data_hash if instance.respond_to?(:to_pson_data_hash)
+        case instance
+        when Hash
+            instance = instance.inject({}) do |h, (k,v)|
+                h[k] = instance_to_data(v)
+                h
+            end
+        when Array
+            instance.collect! do |i|
+                instance_to_data(i)
+            end
+        end
+        instance
+    end
+end

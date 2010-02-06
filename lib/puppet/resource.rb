@@ -53,7 +53,7 @@ class Puppet::Resource
 
             # Don't duplicate the title as the namevar
             next hash if param == namevar and value == title
-            hash[param] = value
+            hash[param] = value.is_a?(Puppet::Resource::Reference) ? value.to_s : value
             hash
         end
 
