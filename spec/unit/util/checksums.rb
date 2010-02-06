@@ -15,6 +15,7 @@ describe Puppet::Util::Checksums do
 
     content_sums = [:md5, :md5lite, :sha1, :sha1lite]
     file_only = [:ctime, :mtime]
+    stream = [:md5_stream, :sha1_stream]
 
     content_sums.each do |sumtype|
         it "should be able to calculate %s sums from strings" % sumtype do
@@ -25,6 +26,12 @@ describe Puppet::Util::Checksums do
     [content_sums, file_only].flatten.each do |sumtype|
         it "should be able to calculate %s sums from files" % sumtype do
             @summer.should be_respond_to(sumtype.to_s + "_file")
+        end
+    end
+
+    stream.each do |sumtype|
+        it "should be able to calculate %s sums from streams" % sumtype do
+            @summer.should be_respond_to(sumtype.to_s)
         end
     end
 
@@ -61,6 +68,11 @@ describe Puppet::Util::Checksums do
                 digest.expects(:hexdigest).returns :mydigest
 
                 @summer.send(sum.to_s + "_file", file).should == :mydigest
+            end
+
+            it "should use #{klass} to seed checksum stream" do
+                @summer.send("#{sum}_stream").should be_instance_of(Puppet::Util::ChecksumStream)
+                @summer.send("#{sum}_stream").digest.should be_instance_of(klass)
             end
         end
     end

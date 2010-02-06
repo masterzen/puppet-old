@@ -1,3 +1,5 @@
+require 'puppet/util/checksum_stream'
+
 # A stand-alone module for calculating checksums
 # in a generic way.
 module Puppet::Util::Checksums
@@ -34,6 +36,11 @@ module Puppet::Util::Checksums
         md5_file(filename, true)
     end
 
+    def md5_stream
+        require 'digest/md5'
+        Puppet::Util::ChecksumStream.new(Digest::MD5.new())
+    end
+
     # Return the :mtime timestamp of a file.
     def mtime_file(filename)
         File.stat(filename).send(:mtime)
@@ -61,6 +68,11 @@ module Puppet::Util::Checksums
     # Calculate a checksum of the first 500 chars of a file's content using Digest::SHA1.
     def sha1lite_file(filename)
         sha1_file(filename, true)
+    end
+
+    def sha1_stream
+        require 'digest/sha1'
+        Puppet::Util::ChecksumStream.new(Digest::SHA1.new())
     end
 
     # Return the :ctime of a file.
