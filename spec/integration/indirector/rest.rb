@@ -422,7 +422,7 @@ describe Puppet::Indirector::REST do
                     @mock_model.stubs(:render_multiple).returns nil.to_yaml
                 end
 
-                it "should return nil" do
+                it "should not return nil" do
                     Puppet::TestIndirectedFoo.search('bar').should == []
                 end
             end

@@ -3,6 +3,7 @@ require 'uri'
 
 require 'puppet/network/http_pool'
 require 'puppet/network/http/api/v1'
+require 'puppet/network/response_stream'
 
 # Access objects via REST
 class Puppet::Indirector::REST < Puppet::Indirector::Terminus
@@ -44,10 +45,11 @@ class Puppet::Indirector::REST < Puppet::Indirector::Terminus
             content_type = response['content-type'].gsub(/\s*;.*$/,'') # strip any appended charset
 
             # Convert the response to a deserialized object.
+            response = Puppet::Network::ResponseStream.new(response)
             if multiple
-                model.convert_from_multiple(content_type, response.body)
+                model.convert_from_multiple(content_type, response)
             else
-                model.convert_from(content_type, response.body)
+                model.convert_from(content_type, response)
             end
         else
             # Raise the http error if we didn't get a 'success' of some kind.
@@ -66,14 +68,18 @@ class Puppet::Indirector::REST < Puppet::Indirector::Terminus
     end
 
     def find(request)
-        return nil unless result = deserialize(network(request).get(indirection2uri(request), headers))
+        result = nil
+        network(request).request_get(indirection2uri(request), headers) do |response|
+            result = deserialize(response)
+        end
         result.name = request.key
         result
     end
 
     def search(request)
-        unless result = deserialize(network(request).get(indirection2uri(request), headers), true)
-            return []
+        result = []
+        network(request).request_get(indirection2uri(request), headers) do |response|
+            result = deserialize(response, true) || []
         end
         return result
     end
