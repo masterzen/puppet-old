@@ -280,6 +280,10 @@ describe "Puppet Network Format" do
             @format.should be_supported(String)
         end
 
+        it "should always support streaming" do
+            @format.should be_support_stream
+        end
+
         it "should fail if its multiple_render method is used" do
             lambda { @format.render_multiple("foo") }.should raise_error(NotImplementedError)
         end

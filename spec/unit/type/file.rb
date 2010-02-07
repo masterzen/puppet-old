@@ -774,5 +774,37 @@ describe Puppet::Type.type(:file) do
 
             lambda { file.write("something", :content) }.should raise_error(Puppet::Error)
         end
+
+        it "should stream streamable content" do
+            file = Puppet::Type::File.new(:name => "/my/file", :backup => "puppet")
+            f = stub_everything 'file'
+            File.stubs(:open).yields(f)
+            File.stubs(:rename)
+            content = stub_everything 'content'
+
+            content.expects(:stream).yields("chunk")
+            f.expects(:print).with("chunk")
+
+            file.write(content, :content)
+        end
+
+        it "should use the streamed checksum" do
+            file = Puppet::Type::File.new(:name => "/my/file", :backup => "puppet")
+            f = stub_everything 'file'
+            File.stubs(:open).yields(f)
+            File.stubs(:rename)
+            file.stubs(:validate_checksum?).returns(true)
+            file.stubs(:fail_if_checksum_is_wrong)
+            content = stub_everything 'content'
+            property = stub_everything 'property'
+            file.stubs(:property).returns property
+            property.stubs(:checktype).returns(:md5)
+            checksum = stub_everything 'checksum', :checksum => "DEADBEEF"
+            content.stubs(:stream).returns(checksum)
+
+            file.expects(:setchecksum).with("{md5}DEADBEEF")
+
+            file.write(content, :content)
+        end
     end
 end

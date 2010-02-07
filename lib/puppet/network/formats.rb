@@ -143,6 +143,10 @@ Puppet::Network::FormatHandler.create(:raw, :mime => "application/x-raw", :weigh
         raise NotImplementedError
     end
 
+    def support_stream?
+        true
+    end
+
     # LAK:NOTE The format system isn't currently flexible enough to handle
     # what I need to support raw formats just for individual instances (rather
     # than both individual and collections), but we don't yet have enough data

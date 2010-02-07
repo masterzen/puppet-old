@@ -710,7 +710,11 @@ module Puppet
             if validate = validate_checksum?
                 # Use the appropriate checksum type -- md5, md5lite, etc.
                 sumtype = property(:checksum).checktype
-                checksum ||= "{#{sumtype}}" + property(:checksum).send(sumtype, content)
+                if content.is_a?(String)
+                    checksum ||= "{#{sumtype}}" + property(:checksum).send(sumtype, content)
+                else
+                    content.checksum = property(:checksum).send("#{sumtype}_stream")
+                end
             end
 
             remove_existing(:file)
@@ -729,7 +733,18 @@ module Puppet
             umask = mode ? 000 : 022
 
             Puppet::Util.withumask(umask) do
-                File.open(path, File::CREAT|File::WRONLY|File::TRUNC, mode) { |f| f.print content }
+                File.open(path, File::CREAT|File::WRONLY|File::TRUNC, mode) do |f|
+                    if content.is_a?(String)
+                        f.print content
+                    else # we're in front of a stream
+                        newchecksum = content.stream do |c|
+                            f.print c
+                        end
+                        if validate and newchecksum
+                            checksum ||= "{#{sumtype}}" + newchecksum.checksum
+                        end
+                    end
+                end
             end
 
             # And put our new file in place
