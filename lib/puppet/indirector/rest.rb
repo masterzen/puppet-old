@@ -72,7 +72,7 @@ class Puppet::Indirector::REST < Puppet::Indirector::Terminus
         network(request).request_get(indirection2uri(request), headers) do |response|
             result = deserialize(response)
         end
-        result.name = request.key
+        result.name = request.key if !result.nil? and result.respond_to?(:name)
         result
     end
 

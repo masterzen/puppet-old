@@ -235,7 +235,9 @@ describe Puppet::Indirector::REST do
         end
 
         it "should set the name of the resulting instance to the asked-for name" do
-            @connection.expects(:request_get).returns @instance
+            @connection.expects(:request_get).yields(@response)
+            @searcher.expects(:deserialize).with(@response).returns @instance
+            @instance.expects(:respond_to?).with(:name).returns(true)
             @instance.expects(:name=).with "foo bar"
             @searcher.find(@request)
         end
