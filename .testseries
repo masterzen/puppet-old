@@ -1,2 +1,52 @@
-tickets/master/3015
-tickets/master/2596
+#
+# Contributor repositories
+#
+markus=git://github.com/MarkusQ/puppet.git
+luke=git://github.com/lak/puppet.git
+jesse=git://github.com/jes5199/puppet.git
+#
+# Branches to merge into master to produce testing branch
+#
+jesse:ticket/master/3148
+
+luke:tickets/master/2759
+luke:tickets/master/2954
+luke:tickets/master/3015
+luke:tickets/master/1943
+
+#
+# Branches that we may want to merge 
+#
+skip rest
+#
+# Markus -------------------------------
+#
+#  Need to be rebased on master
+#
+markus:feature/0.25.x/futures
+markus:refactor/0.25.x/string_interpolation
+#
+#
+# Luke --------------------------------
+# 
+#  Need a ticket or remove from list
+#
+luke:feature/master/1481-tmp
+#luke:feature/master/2276
+luke:feature/master/event_manager
+luke:feature/event_manager/resource_harness
+luke:feature/event_manager/rollback
+luke:feature/master/internal_dsl
+luke:feature/master/push_tarball
+luke:feature/master/single_executable
+luke:features/master/hash2resources
+#luke:refactor/master/extracted_definedtype
+luke:refactor/master/graph_shadowing
+luke:refactor/master/no_relationship_graph
+luke:test_fixes
+#
+#
+# Brice -------------------------------
+#
+# * Hashes
+
