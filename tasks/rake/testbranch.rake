@@ -224,6 +224,8 @@ task :testbranch do
                             puts '-'*50,"Aborting #{branch_to_merge}",Git.result
                             x = Git.error_message
                             Git.rebase('--abort')
+                            Git.checkout('testing')
+                            Git.delete_branch('testing-temp')
                             fail x
                        end
                     end
