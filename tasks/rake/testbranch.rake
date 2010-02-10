@@ -221,7 +221,7 @@ task :testbranch do
                             end
                         else
                             #      * if it fails for some other reason...?
-                            puts Git.result
+                            puts '-'*50,"Aborting #{branch_to_merge}",Git.result
                             x = Git.error_message
                             Git.rebase('--abort')
                             fail x
