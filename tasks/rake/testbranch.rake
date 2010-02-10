@@ -169,7 +169,7 @@ task :testbranch do
     conflicts = []
     skip_rest = false
     File.readlines(test_series).each do |line|
-        line.chomp!.gsub!(/#.*$/,'').strip! # ignore '#' comments
+        line = line.chomp.gsub(/#.*$/,'').strip # ignore trailing spaces, "\n", '#' comments
         case line
         when /^\s*$/ # ignore blank lines
         when /(\w+)\s*=\s*(.+)/
