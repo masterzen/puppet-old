@@ -169,10 +169,9 @@ task :testbranch do
     conflicts = []
     skip_rest = false
     File.readlines(test_series).each do |line|
-        line.chomp!
+        line.chomp!.gsub!(/#.*$/,'').strip! # ignore '#' comments
         case line
         when /^\s*$/ # ignore blank lines
-        when /^\s*#/ # ignore '#' comments
         when /(\w+)\s*=\s*(.+)/
             sources[$1] = $2
             # markus= git@github.com:MarkusQ/puppet.git

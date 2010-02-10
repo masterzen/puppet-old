@@ -10,8 +10,8 @@ jesse=git://github.com/jes5199/puppet.git
 jesse:ticket/master/3148
 
 luke:tickets/master/2759
-luke:tickets/master/2954
 luke:tickets/master/3015
+luke:tickets/master/2954  # Depends on 3015
 luke:tickets/master/1943
 
 #
