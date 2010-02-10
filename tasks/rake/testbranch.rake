@@ -185,6 +185,7 @@ task :testbranch do
                 begin
                     result = 'succeeded'
                     head_at_start = Git.current_commit
+                    try_to_recover = branch_to_merge.gsub!(/^~/,'')
                     if branch_to_merge =~ /(\w+)\s*:\s*(\S+)/
                         # It's a remote branch; fetch it as testing-temp
                         Git.fetch(sources[$1],$2,'testing-temp') and Git.checkout('testing-temp') or fail(Git.error_message)
@@ -195,8 +196,7 @@ task :testbranch do
                     Git.rebase('testing')
                     skipped_commits = []
                     while not Git.successful?
-                        case Git.error_message
-                        when /Patch failed at \d+ (.*)/
+                        if try_to_recover and Git.error_message =~ /Patch failed at \d+ (.*)/
                             Git.unmerged_files.each { |file|
                                 begin
                                     puts "Looking for resolultions to conflict(s) in #{file}"
