@@ -221,7 +221,7 @@ task :testbranch do
                             end
                         else
                             #      * if it fails for some other reason...?
-                            puts '-'*50,"Aborting #{branch_to_merge}",Git.result
+                            # puts '-'*50,"Aborting #{branch_to_merge}",Git.result
                             x = Git.error_message
                             Git.rebase('--abort')
                             Git.checkout('testing')
@@ -230,7 +230,7 @@ task :testbranch do
                        end
                     end
                     Git.delete_branch('testing') and Git.rename_branch('testing-temp','testing') or fail Git.error_message
-                    #result += ":\n    "+Git.commits_since(head_at_start).join("\n    ")
+                    result += ":\n    "+Git.commits_since(head_at_start).join("\n    ")+"\n    #{`rake spec | tail -n 1`}"
                 rescue => e
                     Git.reset('--hard')
                     result = "failed: #{e}"
