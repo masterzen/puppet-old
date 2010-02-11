@@ -11,9 +11,10 @@ jesse:ticket/master/3148
 
 luke:tickets/master/2759
 luke:tickets/master/3015
-luke:tickets/master/2954  # Depends on 3015
 luke:tickets/master/1943
-
+luke:tickets/master/2954    # Depends on 3015
+markus:feature/testing/2956 # Futures
+~luke:test_fixes
 #
 # Branches that we may want to merge 
 #
@@ -43,7 +44,6 @@ luke:features/master/hash2resources
 #luke:refactor/master/extracted_definedtype
 luke:refactor/master/graph_shadowing
 luke:refactor/master/no_relationship_graph
-luke:test_fixes
 #
 #
 # Brice -------------------------------
