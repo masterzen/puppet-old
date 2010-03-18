@@ -24,13 +24,12 @@ class Puppet::Node::Facts
     def add_local_facts
         values["clientversion"] = Puppet.version.to_s
         values["environment"] ||= Puppet.settings[:environment]
+        add_internal
     end
 
     def initialize(name, values = {})
         @name = name
         @values = values
-
-        add_internal
     end
 
     def downcase_if_necessary
@@ -47,6 +46,10 @@ class Puppet::Node::Facts
         values.each do |fact, value|
             values[fact] = value.to_s
         end
+    end
+
+    def to_yaml_properties
+        ["@name","@values"]
     end
 
     private
