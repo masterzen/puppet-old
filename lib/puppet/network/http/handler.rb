@@ -82,6 +82,10 @@ module Puppet::Network::HTTP::Handler
         raise NotImplementedError
     end
 
+    def set_header(response, header, value)
+        raise NotImplementedError
+    end
+
     def do_exception(response, exception, status=400)
         if exception.is_a?(Puppet::Network::AuthorizationError)
             # make sure we return the correct status code
@@ -108,6 +112,8 @@ module Puppet::Network::HTTP::Handler
         # the content type.
         format = format_to_use(request)
         set_content_type(response, format)
+        set_header(response, 'Vary', 'Accept')
+        set_header(response, 'Cache-Control', "max-age=#{result.ttl}, public, must-revalidate") if result.respond_to?(:ttl) and result.ttl > 0
 
         set_response(response, result.render(format))
     end

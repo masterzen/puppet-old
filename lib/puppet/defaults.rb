@@ -548,6 +548,7 @@ module Puppet
             instances will be serialized using this method, since not all classes
             can be guaranteed to support this format, but it will be used for all
             classes that support it."],
+        :catalog_ttl => [0, "How long http cache can keep a catalog (in seconds), default is never"],
         :puppetdlockfile => [ "$statedir/puppetdlock",
             "A lock file to temporarily stop puppetd from doing anything."],
         :usecacheonfailure => [true,

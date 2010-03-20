@@ -17,6 +17,10 @@ class Puppet::Network::HTTP::RackREST < Puppet::Network::HTTP::RackHttpHandler
         response[ContentType] = format_to_mime(format)
     end
 
+    def set_header(response, header, value)
+        response[header] = value
+    end
+
     # produce the body of the response
     def set_response(response, result, status = 200)
         response.status = status

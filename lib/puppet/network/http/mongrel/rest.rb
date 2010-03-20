@@ -48,6 +48,10 @@ class Puppet::Network::HTTP::MongrelREST < Mongrel::HttpHandler
         response.header['Content-Type'] = format_to_mime(format)
     end
 
+    def set_header(response, header, value)
+        response.header[header] = value
+    end
+
     # produce the body of the response
     def set_response(response, result, status = 200)
         # Set the 'reason' (or 'message', as it's called in Webrick), when

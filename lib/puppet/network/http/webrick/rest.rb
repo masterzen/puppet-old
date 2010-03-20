@@ -48,6 +48,10 @@ class Puppet::Network::HTTP::WEBrickREST < WEBrick::HTTPServlet::AbstractServlet
         response["content-type"] = format_to_mime(format)
     end
 
+    def set_header(response, header, value)
+        response[header.downcase] = value
+    end
+
     def set_response(response, result, status = 200)
         response.status = status
         response.body          = result if status >= 200 and status != 304
