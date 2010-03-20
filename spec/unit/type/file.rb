@@ -90,13 +90,13 @@ describe Puppet::Type.type(:file) do
     end
 
     describe "when validating attributes" do
-        %w{path backup recurse recurselimit source replace force ignore links purge sourceselect}.each do |attr|
+        %w{path checksum backup recurse recurselimit source replace force ignore links purge sourceselect}.each do |attr|
             it "should have a '#{attr}' parameter" do
                 Puppet::Type.type(:file).attrtype(attr.intern).should == :param
             end
         end
 
-        %w{checksum content target ensure owner group mode type}.each do |attr|
+        %w{content target ensure owner group mode type}.each do |attr|
             it "should have a '#{attr}' property" do
                 Puppet::Type.type(:file).attrtype(attr.intern).should == :property
             end
@@ -762,17 +762,6 @@ describe Puppet::Type.type(:file) do
             file = Puppet::Type::File.new(:name => "/my/file", :backup => ".foo")
             file.expects(:bucket)
             file.finish
-        end
-    end
-
-    describe "when writing the file" do
-        it "should propagate failures encountered when renaming the temporary file" do
-            File.stubs(:open)
-
-            File.expects(:rename).raises ArgumentError
-            file = Puppet::Type::File.new(:name => "/my/file", :backup => "puppet")
-
-            lambda { file.write("something", :content) }.should raise_error(Puppet::Error)
         end
     end
 end

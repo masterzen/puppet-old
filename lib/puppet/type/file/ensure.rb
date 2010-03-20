@@ -74,7 +74,6 @@ module Puppet
                 Dir.mkdir(@resource[:path])
             end
             @resource.send(:property_fix)
-            @resource.setchecksum
             return :directory_created
         end
 
