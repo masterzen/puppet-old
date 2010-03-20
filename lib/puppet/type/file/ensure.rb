@@ -42,7 +42,7 @@ module Puppet
 
         newvalue(:file) do
             # Make sure we're not managing the content some other way
-            if property = (@resource.property(:content) || @resource.property(:source))
+            if property = @resource.property(:content)
                 property.sync
             else
                 @resource.write("", :ensure)
@@ -109,8 +109,13 @@ module Puppet
             else
                 should = property.should
             end
+            if should == :absent
+                is = property.retrieve
+            else
+                is = :absent
+            end
 
-            return property.change_to_s(property.retrieve, should)
+            return property.change_to_s(is, should)
         end
 
         # Check that we can actually create anything

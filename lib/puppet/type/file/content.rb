@@ -43,8 +43,8 @@ module Puppet
         # Checksums need to invert how changes are printed.
         def change_to_s(currentvalue, newvalue)
             # Our "new" checksum value is provided by the source.
-            unless source = resource.parameter(:source) and newvalue = source.checksum
-                newvalue = "unknown checksum"
+            if source = resource.parameter(:source) and tmp = source.checksum
+                newvalue = tmp
             end
             if currentvalue == :absent
                 return "defined content as '%s'" % [newvalue]
