@@ -16,6 +16,65 @@ describe Puppet::Type.type(:file) do
         @file.catalog = @catalog
     end
 
+    describe "#write" do
+
+        it "should propagate failures encountered when renaming the temporary file" do
+            File.stubs(:open)
+
+            File.expects(:rename).raises ArgumentError
+            file = Puppet::Type::File.new(:name => "/my/file", :backup => "puppet")
+            file.stubs(:validate_checksum?).returns(false)
+
+            property = stub('content_property', :actual_content => "something", :length => "something".length)
+            file.stubs(:property).with(:content).returns(property)
+
+            lambda { file.write(:content) }.should raise_error(Puppet::Error)
+        end
+
+        it "should delegate writing to the content property" do
+            filehandle = stub_everything 'fh'
+            File.stubs(:open).yields(filehandle)
+            File.stubs(:rename)
+            property = stub('content_property', :actual_content => "something", :length => "something".length)
+            file = Puppet::Type::File.new(:name => "/my/file", :backup => "puppet")
+            file.stubs(:validate_checksum?).returns(false)
+            file.stubs(:property).with(:content).returns(property)
+
+            property.expects(:write).with(filehandle)
+
+            file.write(:content)
+        end
+
+        describe "when validating the checksum" do
+            before { @file.stubs(:validate_checksum?).returns(true) }
+
+            it "should fail if the checksum parameter and content checksums do not match" do
+                checksum = stub('checksum_parameter',  :sum => 'checksum_b')
+                @file.stubs(:parameter).with(:checksum).returns(checksum)
+
+                property = stub('content_property', :actual_content => "something", :length => "something".length, :write => 'checksum_a')
+                @file.stubs(:property).with(:content).returns(property)
+
+                lambda { @file.write :NOTUSED }.should raise_error(Puppet::Error)
+            end
+        end
+
+        describe "when not validating the checksum" do
+            before { @file.stubs(:validate_checksum?).returns(false) }
+
+            it "should not fail if the checksum property and content checksums do not match" do
+                checksum = stub('checksum_parameter',  :sum => 'checksum_b')
+                @file.stubs(:parameter).with(:checksum).returns(checksum)
+
+                property = stub('content_property', :actual_content => "something", :length => "something".length, :write => 'checksum_a')
+                @file.stubs(:property).with(:content).returns(property)
+
+                lambda { @file.write :NOTUSED }.should_not raise_error(Puppet::Error)
+            end
+
+        end
+    end
+
     it "should have a method for determining if the file is present" do
         @file.must respond_to(:exist?)
     end
@@ -762,6 +821,14 @@ describe Puppet::Type.type(:file) do
             file = Puppet::Type::File.new(:name => "/my/file", :backup => ".foo")
             file.expects(:bucket)
             file.finish
+        end
+    end
+
+    describe "when retrieving the current file state" do
+        it "should copy the source values if the 'source' parameter is set" do
+            file = Puppet::Type::File.new(:name => "/my/file", :source => "/foo/bar")
+            file.parameter(:source).expects(:copy_source_values)
+            file.retrieve
         end
     end
 end
