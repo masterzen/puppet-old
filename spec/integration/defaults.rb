@@ -228,4 +228,8 @@ describe "Puppet defaults" do
     it "should have a 'postrun_command' that defaults to the empty string" do
         Puppet.settings[:postrun_command].should == ""
     end
+
+    it "should have an http_compression setting that defaults to false" do
+        Puppet.settings[:http_compression].should be_false
+    end
 end
