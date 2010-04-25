@@ -263,6 +263,58 @@ Suite.new :remote_catalog, "Remote catalog handling" do
     end
 end
 
+Suite.new :rest, "REST access to" do
+    def read_facts(file)
+        YAML.load(File.read(file))
+    end
+
+    def prepare
+        $args[:cache] = false
+
+        Puppet::Resource::Catalog.terminus_class = :rest
+        Puppet::Resource::Catalog.cache_class = :yaml
+        Puppet::Node::Facts.terminus_class = :facter
+
+        Puppet::SSL::Host.ca_location = :remote
+
+        Puppet[:certname] = $options[:fqdn]
+
+        @host = Puppet::SSL::Host.new
+        @host.wait_for_cert($options[:waitforcert])
+
+        unless $options[:facts] and @facts = read_facts($options[:facts])
+            unless @facts = Puppet::Node::Facts.find($options[:nodes][0])
+                raise "Could not find facts for %s" % $options[:nodes][0]
+            end
+        end
+
+        if host = $options[:fqdn]
+            @facts.values["fqdn"] = host
+            @facts.values["hostname"] = host.sub(/\..+/, '')
+            @facts.values["domain"] = host.sub(/^[^.]+\./, '')
+        end
+        @facts.values["lsddistcodename"] = 'lenny'
+
+        @facts = {:facts_format => :b64_zlib_yaml, :facts => CGI.escape(@facts.render(:b64_zlib_yaml))}
+
+        if [:metadata, :file].include?(@name) and not $options[:file]
+            fail "You must specify a file (using --file <url>) to interact with on the server"
+        end
+    end
+
+    newtest :catalog, "Compiled catalog" do
+        Puppet::Resource::Catalog.find($options[:nodes][0], @facts.merge(:ignore_cache => true))
+    end
+
+    newtest :metadata, "File metadata" do
+        Puppet::FileServing::Metadata.find($options[:file])
+    end
+
+    newtest :content, "File content" do
+        Puppet::FileServing::Content.find($options[:file])
+    end
+end
+
 Suite.new :file, "File interactions" do
     def prepare
         unless $options[:file]
@@ -413,11 +465,13 @@ $cmdargs = [
     [ "--retrieve", "-R", GetoptLong::REQUIRED_ARGUMENT ],
     [ "--fork",           GetoptLong::REQUIRED_ARGUMENT ],
     [ "--fqdn",     "-F", GetoptLong::REQUIRED_ARGUMENT ],
+    [ "--facts",          GetoptLong::REQUIRED_ARGUMENT ],
     [ "--suite",    "-s", GetoptLong::REQUIRED_ARGUMENT ],
     [ "--test",     "-t", GetoptLong::REQUIRED_ARGUMENT ],
     [ "--pause",    "-p", GetoptLong::NO_ARGUMENT       ],
     [ "--repeat",   "-r", GetoptLong::REQUIRED_ARGUMENT ],
     [ "--node",     "-n", GetoptLong::REQUIRED_ARGUMENT ],
+    [ "--file",     "-f", GetoptLong::REQUIRED_ARGUMENT ],
     [ "--debug",    "-d", GetoptLong::NO_ARGUMENT       ],
     [ "--help",     "-h", GetoptLong::NO_ARGUMENT       ],
     [ "--list",     "-l", GetoptLong::NO_ARGUMENT       ],
@@ -466,6 +520,8 @@ begin
                 $options[:file] = arg
             when "--fqdn"
                 $options[:fqdn] = arg
+            when "--facts"
+                $options[:facts] = arg
             when "--repeat"
                 $options[:repeat] = Integer(arg)
             when "--help"
@@ -519,8 +575,8 @@ $options[:nodes] << Puppet.settings[:certname] if $options[:nodes].empty?
 $args[:Server] = Puppet[:server]
 
 unless $options[:test]
-    $options[:suite] = :remote_catalog
-    $options[:test] = :getconfig
+    $options[:suite] = :rest
+    $options[:test] = :catalog
 end
 
 unless $options[:test]
