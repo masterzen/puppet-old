@@ -25,6 +25,7 @@ class Puppet::Application::Doc < Puppet::Application
     option("--outputdir OUTPUTDIR","-o")
     option("--verbose","-v")
     option("--debug","-d")
+    option("--charset CHARSET")
 
     option("--format FORMAT", "-f") do |arg|
         method = "to_%s" % arg
@@ -81,7 +82,7 @@ class Puppet::Application::Doc < Puppet::Application
                 Puppet::Util::RDoc.manifestdoc(files)
             else
                 options[:outputdir] = "doc" unless options[:outputdir]
-                Puppet::Util::RDoc.rdoc(options[:outputdir], files)
+                Puppet::Util::RDoc.rdoc(options[:outputdir], files, options[:charset])
             end
         rescue => detail
             if Puppet[:trace]
