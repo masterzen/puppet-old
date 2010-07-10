@@ -79,7 +79,9 @@ describe "Puppet::Resource::Catalog::ActiveRecord" do
       @host = stub 'host', :name => "foo", :save => nil, :merge_resources => nil, :last_compile= => nil, :ip= => nil, :environment= => nil
       @host.stubs(:railsmark).yields
 
-      @node = stub_everything 'node', :parameters => {}
+      @env = stub 'env', :name => :myenv
+
+      @node = stub_everything 'node', :parameters => {}, :environment => @env
       Puppet::Node.stubs(:find).returns(@node)
 
       Puppet::Rails::Host.stubs(:find_by_name).returns @host
@@ -117,8 +119,6 @@ describe "Puppet::Resource::Catalog::ActiveRecord" do
     end
 
     it "should set host environment if we could find a matching node" do
-      @node.stubs(:environment).returns("myenv")
-
       @host.expects(:environment=).with 'myenv'
 
       @terminus.save(@request)
