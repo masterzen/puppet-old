@@ -327,7 +327,7 @@ Suite.new :rest, "REST access to" do
     end
 
     newtest :catalog, "Compiled catalog" do
-        Puppet::Resource::Catalog.find($options[:nodes][0], @facts.merge(:ignore_cache => true))
+        Puppet::Resource::Catalog.find($options[:nodes][0], @facts.merge(:ignore_cache => true, :use_cache => false))
     end
 
     newtest :metadata, "File metadata" do
