@@ -1,3 +1,5 @@
+require 'monitor.rb'
+
 module Puppet::Util::Cacher
   module Expirer
     attr_reader :timestamp
@@ -49,7 +51,7 @@ module Puppet::Util::Cacher
       define_method(name.to_s + "=") do |value|
         # Make sure the cache timestamp is set
         cache_timestamp
-        value_cache[name] = value
+        value_cache.synchronize { value_cache[name] = value }
       end
 
       if ttl = options[:ttl]
@@ -70,6 +72,11 @@ module Puppet::Util::Cacher
 
   # Methods that get added to instances.
   module InstanceMethods
+
+    class SynchronizeHelper < Hash
+      include MonitorMixin
+    end
+
     def expire
       # Only expire if we have an expirer.  This is
       # mostly so that we can comfortably handle cases
@@ -92,15 +99,17 @@ module Puppet::Util::Cacher
     end
 
     def cached_value(name)
-      # Allow a nil expirer, in which case we regenerate the value every time.
-      if expired_by_expirer?(name)
-        value_cache.clear
-        @cache_timestamp = Time.now
-      elsif expired_by_ttl?(name)
-        value_cache.delete(name)
+      value_cache.synchronize do
+        # Allow a nil expirer, in which case we regenerate the value every time.
+        if expired_by_expirer?(name)
+          value_cache.clear
+          @cache_timestamp = Time.now
+        elsif expired_by_ttl?(name)
+          value_cache.delete(name)
+        end
+        value_cache[name] = send("init_#{name}") unless value_cache.include?(name)
+        value_cache[name]
       end
-      value_cache[name] = send("init_#{name}") unless value_cache.include?(name)
-      value_cache[name]
     end
 
     def expired_by_expirer?(name)
@@ -121,7 +130,7 @@ module Puppet::Util::Cacher
     end
 
     def value_cache
-      @value_cache ||= {}
+      @value_cache ||= SynchronizeHelper.new
     end
   end
 end
