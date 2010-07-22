@@ -1,4 +1,82 @@
 #!/usr/bin/env ruby
+# == Synopsis
+#
+# This tool can exercize a puppetmaster by simulating an arbitraty number of concurrent clients
+# in a lightweight way.
+# 
+# = Prerequisites
+# 
+# This tool requires Event Machine and em-http-request as long with an installation of Puppet.
+# Event Machine can be installed from gems.
+# em-http-request can be installed from gem.
+# 
+# = Usage
+#
+#   puppet-load [-d|--debug] [--concurrency <num>] [--repeat <num>] [-V|--version] [-v|--verbose]
+#               [--node <host.domain.com>] [--facts <factfile>] [--cert <certfile>] [--key <keyfile>]
+#               [--server <server.domain.com>]
+#
+# = Description
+#
+# This is a simple script meant for doing performance tests of puppet masters. It does this
+# by simulating concurrent connections to a puppet master and asking for catalog compilation.
+#
+# = Options
+#
+# Unlike other puppet executables, puppet-load doesn't parse puppet.conf nor use puppet options
+#
+# debug::
+#   Enable full debugging.
+#
+# concurreny::
+#   Number of simulated concurrent clients.
+#
+# server::
+#   Set the puppet master hostname or IP address..
+#
+# node::
+#   Set the fully-qualified domain name of the client.  This is only used for
+#   certificate purposes, but can be used to override the discovered hostname.
+#
+# help::
+#   Print this help message
+#
+# facts::
+#   This can be used to provide facts for the compilation, directly from a YAML
+#   file as found in the clientyaml directory.
+#
+# cert::
+#   This option is mandatory. It should be set to the cert PEM file that will be used
+#   to quthenticate the client connections.
+#
+# key::
+#   This option is mandatory. It should be set to the private key PEM file that will be used
+#   to quthenticate the client connections.
+#
+# timeout::
+#   The number of seconds after which a simulated client is declared in error if it didn't get
+#   a catalog. The default is 180s.
+#
+# repeat::
+#  How many times to perform the test. This means puppet-load will ask for
+#  concurrency * repeat catalogs. 
+#
+# verbose::
+#   Turn on verbose reporting.
+#
+# version::
+#   Print the puppet version number and exit.
+#
+# = Example
+#
+#   puppet-load -debug --fqdn server.domain.com --server master.domain.com --facts server_facts.yaml =-concurrency 5 --repeat 20 
+#
+# = TODO
+#   * Allow to simulate any different nodes
+#   * More output stats for error connections (ie report errors, HTTP code...)
+#
+#
+
 # Do an initial trap, so that cancels don't get a stack trace.
 trap(:INT) do
     $stderr.puts "Cancelling startup"
@@ -14,19 +92,19 @@ require 'puppet'
 
 $cmdargs = [
     [ "--concurrency",  "-c", GetoptLong::REQUIRED_ARGUMENT       ],
-    [ "--fqdn",     "-F", GetoptLong::REQUIRED_ARGUMENT ],
+    [ "--node",     "-n", GetoptLong::REQUIRED_ARGUMENT ],
     [ "--facts",          GetoptLong::REQUIRED_ARGUMENT ],
     [ "--repeat",   "-r", GetoptLong::REQUIRED_ARGUMENT ],
-    [ "--node",     "-n", GetoptLong::REQUIRED_ARGUMENT ],
+    [ "--cert",     "-C", GetoptLong::REQUIRED_ARGUMENT ],
+    [ "--key",      "-k", GetoptLong::REQUIRED_ARGUMENT ],
+    [ "--timeout",  "-t", GetoptLong::REQUIRED_ARGUMENT ],
+    [ "--server",   "-s", GetoptLong::REQUIRED_ARGUMENT ],
     [ "--debug",    "-d", GetoptLong::NO_ARGUMENT       ],
     [ "--help",     "-h", GetoptLong::NO_ARGUMENT       ],
-    [ "--list",     "-l", GetoptLong::NO_ARGUMENT       ],
     [ "--verbose",  "-v", GetoptLong::NO_ARGUMENT       ],
     [ "--version",  "-V", GetoptLong::NO_ARGUMENT       ],
 ]
 
-# Add all of the config parameters as valid $options.
-Puppet.settings.addargs($cmdargs)
 Puppet::Util::Log.newdestination(:console)
 
 times = {}
@@ -39,7 +117,7 @@ end
 result = GetoptLong.new(*$cmdargs)
 
 $args = {}
-$options = {:repeat => 1, :concurrency => 1, :pause => false, :nodes => []}
+$options = {:repeat => 1, :concurrency => 1, :pause => false, :cert => nil, :key => nil, :timeout => 180, :masterport => 8140}
 
 begin
     result.each { |opt,arg|
@@ -51,8 +129,12 @@ begin
                     $stderr.puts "The argument to 'fork' must be an integer"
                     exit(14)
                 end
-            when "--fqdn"
-                $options[:fqdn] = arg
+            when "--node"
+                $options[:node] = arg
+            when "--server"
+                $options[:server] = arg
+            when "--masterport"
+                $options[:masterport] = arg
             when "--facts"
                 $options[:facts] = arg
             when "--repeat"
@@ -73,10 +155,10 @@ begin
             when "--debug"
                 Puppet::Util::Log.level = :debug
                 Puppet::Util::Log.newdestination(:console)
-            when "--node"
-                $options[:nodes] << arg
-            else
-                Puppet.settings.handlearg(opt, arg)
+            when "--cert"
+                $options[:cert] = arg
+            when "--key"
+                $options[:key] = arg
         end
     }
 rescue GetoptLong::InvalidOption => detail
@@ -85,10 +167,9 @@ rescue GetoptLong::InvalidOption => detail
     exit(1)
 end
 
-# Now parse the config
-Puppet.parse_config
-
-$options[:nodes] << Puppet.settings[:certname] if $options[:nodes].empty?
+unless $options[:cert] and $options[:key]
+  raise "--cert and --key are mandatory to authenticate the client"
+end
 
 unless $options[:facts] and facts = read_facts($options[:facts])
     unless facts = Puppet::Node::Facts.find($options[:nodes][0])
@@ -96,12 +177,13 @@ unless $options[:facts] and facts = read_facts($options[:facts])
     end
 end
 
-if host = $options[:fqdn]
-    facts.values["fqdn"] = host
-    facts.values["hostname"] = host.sub(/\..+/, '')
-    facts.values["domain"] = host.sub(/^[^.]+\./, '')
+unless $options[:node]
+  raise "--node is a mandatory argument. It tells to the master what node to compile"
 end
-facts.values["lsddistcodename"] = 'lenny'
+
+facts.values["fqdn"] = $options[:node]
+facts.values["hostname"] = $options[:node].sub(/\..+/, '')
+facts.values["domain"] = $options[:node].sub(/^[^.]+\./, '')
 
 headers = {:facts_format => "b64_zlib_yaml", :facts => CGI.escape(facts.render(:b64_zlib_yaml))}
 
@@ -129,13 +211,13 @@ class RequestPool
   end
 
   def spawn_request(index)
-    EventMachine::HttpRequest.new("https://#{Puppet.settings[:server]}:#{Puppet.settings[:masterport]}/production/catalog/#{$options[:fqdn]}").get(
-      :port => Puppet.settings[:masterport],
+    EventMachine::HttpRequest.new("https://#{$options[:server]}:#{$options[:masterport]}/production/catalog/#{$options[:node]}").get(
+      :port => $options[:masterport],
       :query => @parameters,
-      :timeout => 180,
+      :timeout => $options[:timeout],
       :head => { "Accept" => "pson, yaml, b64_zlib_yaml, marshal, dot, raw", "Accept-Encoding" => "gzip, deflate" },
-      :ssl => { :private_key_file => "#{Puppet.settings[:privatekeydir]}/#{$options[:fqdn]}.pem",
-                :cert_chain_file => "#{Puppet.settings[:certdir]}/#{$options[:fqdn]}.pem",
+      :ssl => { :private_key_file => $options[:key],
+                :cert_chain_file => $options[:cert],
                 :verify_peer => false } ) do
         @times[index] = Time.now
     end
