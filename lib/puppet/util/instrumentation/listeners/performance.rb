@@ -1,0 +1,28 @@
+require 'monitor'
+
+Puppet::Util::Instrumentation.new_listener(:performance) do
+
+  def notify(label, event, data)
+    return if event == :start
+
+    duration = data[:finished] - data[:started]
+    samples.synchronize do
+      @samples[label] ||= { :count => 0, :max => 0, :min => 32768, :sum => 0, :average => 0 }
+      @samples[label][:count] += 1
+      @samples[label][:sum] += duration
+      @samples[label][:max] = [ @samples[label][:max], duration ].max
+      @samples[label][:min] = [ @samples[label][:min], duration ].min
+      @samples[label][:average] = @samples[label][:sum] / @samples[label][:count]
+    end
+  end
+
+  def data
+    samples.synchronize do
+      @samples.dup
+    end
+  end
+
+  def samples
+    @samples ||= {}.extend(MonitorMixin)
+  end
+end
