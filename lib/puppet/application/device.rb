@@ -188,7 +188,7 @@ Licensed under the Apache 2.0 License
 
         require 'puppet/configurer'
         configurer = Puppet::Configurer.new
-        report = configurer.run
+        report = configurer.run(:network_device => true)
       rescue => detail
         puts detail.backtrace if Puppet[:trace]
         Puppet.err detail.to_s
