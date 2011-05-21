@@ -4,7 +4,6 @@ end
 require 'puppet/network/http/api/v1'
 require 'puppet/network/rest_authorization'
 require 'puppet/network/rights'
-require 'resolv'
 
 module Puppet::Network::HTTP::Handler
   include Puppet::Network::HTTP::API::V1
@@ -163,17 +162,6 @@ module Puppet::Network::HTTP::Handler
     obj = model(indirection_name).convert_from(format, data)
     result = model(indirection_name).indirection.save(obj, key)
     return_yaml_response(response, result)
-  end
-
-  # resolve node name from peer's ip address
-  # this is used when the request is unauthenticated
-  def resolve_node(result)
-    begin
-      return Resolv.getname(result[:ip])
-    rescue => detail
-      Puppet.err "Could not resolve #{result[:ip]}: #{detail}"
-    end
-    result[:ip]
   end
 
   private
