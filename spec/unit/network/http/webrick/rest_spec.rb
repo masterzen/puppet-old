@@ -9,6 +9,10 @@ describe Puppet::Network::HTTP::WEBrickREST do
     Puppet::Network::HTTP::WEBrickREST.ancestors.should be_include(Puppet::Network::HTTP::Handler)
   end
 
+  it "should include the Puppet::Auth::Handler module" do
+    Puppet::Network::HTTP::WEBrickREST.ancestors.should be_include(Puppet::Auth::Handler)
+  end
+
   describe "when initializing", :'fails_on_ruby_1.9.2' => true do
     it "should call the Handler's initialization hook with its provided arguments as the server and handler" do
       Puppet::Network::HTTP::WEBrickREST.any_instance.expects(:initialize_for_puppet).with(:server => "my", :handler => "arguments")
@@ -151,29 +155,17 @@ describe Puppet::Network::HTTP::WEBrickREST do
         @handler.params(@request)[:ip].should == "ipaddress"
       end
 
-      it "should set 'authenticated' to true if a certificate is present" do
-        cert = stub 'cert', :subject => [%w{CN host.domain.com}]
-        @request.stubs(:client_cert).returns cert
-        @handler.params(@request)[:authenticated].should be_true
+      it "should ask auth plugin if client is authenticated" do
+        @request.stubs(:peeraddr).returns(%w{noidea dunno hostname ipaddress})
+        @handler.expects(:authenticate).with("ipaddress", @request)
+        @handler.params(@request)
       end
 
-      it "should set 'authenticated' to false if no certificate is present" do
-        @request.stubs(:client_cert).returns nil
-        @handler.params(@request)[:authenticated].should be_false
-      end
-
-      it "should pass the client's certificate name to model method if a certificate is present" do
-        cert = stub 'cert', :subject => [%w{CN host.domain.com}]
-        @request.stubs(:client_cert).returns cert
-        @handler.params(@request)[:node].should == "host.domain.com"
-      end
-
-      it "should resolve the node name with an ip address look-up if no certificate is present" do
-        @request.stubs(:client_cert).returns nil
-
-        @handler.expects(:resolve_node).returns(:resolved_node)
-
-        @handler.params(@request)[:node].should == :resolved_node
+      it "should use authentication result from auth plugin" do
+        @request.stubs(:peeraddr).returns(%w{noidea dunno hostname ipaddress})
+        @handler.stubs(:authenticate).with("ipaddress", @request).returns([:authenticated, :node_name])
+        @handler.params(@request)[:authenticated].should == :authenticated
+        @handler.params(@request)[:node].should == :node_name
       end
     end
   end

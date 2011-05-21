@@ -5,6 +5,7 @@ require 'webrick'
 class Puppet::Network::HTTP::WEBrickREST < WEBrick::HTTPServlet::AbstractServlet
 
   include Puppet::Network::HTTP::Handler
+  include Puppet::Auth::Handler
 
   def initialize(server, handler)
     raise ArgumentError, "server is required" unless server
@@ -68,13 +69,7 @@ class Puppet::Network::HTTP::WEBrickREST < WEBrick::HTTPServlet::AbstractServlet
     # If they have a certificate (which will almost always be true)
     # then we get the hostname from the cert, instead of via IP
     # info
-    result[:authenticated] = false
-    if cert = request.client_cert and nameary = cert.subject.to_a.find { |ary| ary[0] == "CN" }
-      result[:node] = nameary[1]
-      result[:authenticated] = true
-    else
-      result[:node] = resolve_node(result)
-    end
+    result[:authenticated], result[:node] = authenticate(result[:ip], request)
 
     result
   end

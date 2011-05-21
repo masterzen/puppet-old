@@ -28,7 +28,7 @@ class Puppet::Network::HTTP::WEBrick
 
     arguments = {:BindAddress => args[:address], :Port => args[:port]}
     arguments.merge!(setup_logger)
-    arguments.merge!(setup_ssl)
+    arguments.merge!(Puppet::Auth.handler(:webrick).setup)
 
     @server = WEBrick::HTTPServer.new(arguments)
     @server.listeners.each { |l| l.start_immediately = false }
@@ -89,30 +89,6 @@ class Puppet::Network::HTTP::WEBrick
       [logger, WEBrick::AccessLog::COMMON_LOG_FORMAT ],
       [logger, WEBrick::AccessLog::REFERER_LOG_FORMAT ]
     ]
-  end
-
-  # Add all of the ssl cert information.
-  def setup_ssl
-    results = {}
-
-    # Get the cached copy.  We know it's been generated, too.
-    host = Puppet::SSL::Host.localhost
-
-    raise Puppet::Error, "Could not retrieve certificate for #{host.name} and not running on a valid certificate authority" unless host.certificate
-
-    results[:SSLPrivateKey] = host.key.content
-    results[:SSLCertificate] = host.certificate.content
-    results[:SSLStartImmediately] = true
-    results[:SSLEnable] = true
-
-    raise Puppet::Error, "Could not find CA certificate" unless Puppet::SSL::Certificate.indirection.find(Puppet::SSL::CA_NAME)
-
-    results[:SSLCACertificateFile] = Puppet[:localcacert]
-    results[:SSLVerifyClient] = OpenSSL::SSL::VERIFY_PEER
-
-    results[:SSLCertificateStore] = host.ssl_store
-
-    results
   end
 
   private

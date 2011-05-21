@@ -7,6 +7,7 @@ require 'spec_helper'
 require 'puppet/network/handler'
 require 'puppet/network/http'
 require 'puppet/network/http/webrick'
+require 'puppet/network/handler'
 
 describe Puppet::Network::HTTP::WEBrick, "after initializing" do
   it "should not be listening" do
@@ -20,7 +21,9 @@ describe Puppet::Network::HTTP::WEBrick, "when turning on listening" do
     [:mount, :start, :shutdown].each {|meth| @mock_webrick.stubs(meth)}
     WEBrick::HTTPServer.stubs(:new).returns(@mock_webrick)
     @server = Puppet::Network::HTTP::WEBrick.new
-    [:setup_logger, :setup_ssl].each {|meth| @server.stubs(meth).returns({})} # the empty hash is required because of how we're merging
+    @server.stubs(:setup_logger).returns({}) # the empty hash is required because of how we're merging
+    @auth = stub 'auth', :setup => {}
+    Puppet::Auth.stubs(:handler).with(:webrick).returns(@auth)
     @listen_params = { :address => "127.0.0.1", :port => 31337, :xmlrpc_handlers => [], :protocols => [ :rest ] }
   end
 
@@ -65,8 +68,8 @@ describe Puppet::Network::HTTP::WEBrick, "when turning on listening" do
     @server.listen(@listen_params)
   end
 
-  it "should configure SSL for webrick" do
-    @server.expects(:setup_ssl).returns(:Ssl => :testing, :Other => :yay)
+  it "should configure authentication for webrick" do
+    @auth.expects(:setup).returns(:Ssl => :testing, :Other => :yay)
 
     WEBrick::HTTPServer.expects(:new).with {|args|
       args[:Ssl] == :testing and args[:Other] == :yay
@@ -167,7 +170,9 @@ describe Puppet::Network::HTTP::WEBrick, "when turning off listening" do
     [:mount, :start, :shutdown].each {|meth| @mock_webrick.stubs(meth)}
     WEBrick::HTTPServer.stubs(:new).returns(@mock_webrick)
     @server = Puppet::Network::HTTP::WEBrick.new
-    [:setup_logger, :setup_ssl].each {|meth| @server.stubs(meth).returns({})} # the empty hash is required because of how we're merging
+    @server.stubs(:setup_logger).returns({}) # the empty hash is required because of how we're merging
+    @auth = stub 'auth', :setup => {}
+    Puppet::Auth.stubs(:handler).with(:webrick).returns(@auth)
     @listen_params = { :address => "127.0.0.1", :port => 31337, :handlers => [ :node, :catalog ], :protocols => [ :rest ] }
   end
 
@@ -273,68 +278,6 @@ describe Puppet::Network::HTTP::WEBrick do
         [logger, WEBrick::AccessLog::COMMON_LOG_FORMAT],
         [logger, WEBrick::AccessLog::REFERER_LOG_FORMAT]
       ]
-    end
-  end
-
-  describe "when configuring ssl" do
-    before do
-      @key = stub 'key', :content => "mykey"
-      @cert = stub 'cert', :content => "mycert"
-      @host = stub 'host', :key => @key, :certificate => @cert, :name => "yay", :ssl_store => "mystore"
-
-      Puppet::SSL::Certificate.indirection.stubs(:find).with('ca').returns @cert
-
-      Puppet::SSL::Host.stubs(:localhost).returns @host
-    end
-
-    it "should use the key from the localhost SSL::Host instance" do
-      Puppet::SSL::Host.expects(:localhost).returns @host
-      @host.expects(:key).returns @key
-
-      @server.setup_ssl[:SSLPrivateKey].should == "mykey"
-    end
-
-    it "should configure the certificate" do
-      @server.setup_ssl[:SSLCertificate].should == "mycert"
-    end
-
-    it "should fail if no CA certificate can be found" do
-      Puppet::SSL::Certificate.indirection.stubs(:find).with('ca').returns nil
-
-      lambda { @server.setup_ssl }.should raise_error(Puppet::Error)
-    end
-
-    it "should specify the path to the CA certificate" do
-      Puppet.settings.stubs(:value).returns "whatever"
-      Puppet.settings.stubs(:value).with(:hostcrl).returns 'false'
-      Puppet.settings.stubs(:value).with(:localcacert).returns '/ca/crt'
-
-      @server.setup_ssl[:SSLCACertificateFile].should == "/ca/crt"
-    end
-
-    it "should start ssl immediately" do
-      @server.setup_ssl[:SSLStartImmediately].should be_true
-    end
-
-    it "should enable ssl" do
-      @server.setup_ssl[:SSLEnable].should be_true
-    end
-
-    it "should configure the verification method as 'OpenSSL::SSL::VERIFY_PEER'" do
-      @server.setup_ssl[:SSLVerifyClient].should == OpenSSL::SSL::VERIFY_PEER
-    end
-
-    it "should add an x509 store" do
-      Puppet.settings.stubs(:value).returns "whatever"
-      Puppet.settings.stubs(:value).with(:hostcrl).returns '/my/crl'
-
-      @host.expects(:ssl_store).returns "mystore"
-
-      @server.setup_ssl[:SSLCertificateStore].should == "mystore"
-    end
-
-    it "should set the certificate name to 'nil'" do
-      @server.setup_ssl[:SSLCertName].should be_nil
     end
   end
 end
