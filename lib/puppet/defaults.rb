@@ -472,7 +472,8 @@ module Puppet
     :fileserverconfig => ["$confdir/fileserver.conf", "Where the fileserver configuration is stored."],
     :strict_hostname_checking => [false, "Whether to only search for the complete
       hostname as it is in the certificate when searching for node information
-      in the catalogs."]
+      in the catalogs."],
+    :http_basic_htpasswd => ["$vardir/htpasswd", "HTTP Basic auth node password file. This settings is used only when --auth=http_basic"]
   )
 
   setdefaults(:metrics,
@@ -632,7 +633,9 @@ module Puppet
       Your puppet master needs to support compression (usually by activating some settings in a reverse-proxy
       in front of the puppet master, which rules out webrick).
       It is harmless to activate this settings if your master doesn't support
-      compression, but if it supports it, this setting might reduce performance on high-speed LANs."]
+      compression, but if it supports it, this setting might reduce performance on high-speed LANs."],
+    :http_basic_username => [fqdn.downcase, "HTTP Basic auth username - defaults to \$fqdn"],
+    :http_basic_password => ["puppet", "HTTP Basic auth password - defaults to 'puppet'"]
   )
 
   setdefaults(:inspect,
