@@ -110,9 +110,9 @@ describe Puppet::Application::Master do
     before :each do
       Puppet::Log.stubs(:newdestination)
       Puppet.stubs(:settraps)
-      Puppet::SSL::CertificateAuthority.stubs(:instance)
-      Puppet::SSL::CertificateAuthority.stubs(:ca?)
       Puppet.settings.stubs(:use)
+      @server = stub_everything 'auth server'
+      Puppet::Auth.stubs(:server).returns(@server)
 
       @master.options.stubs(:[]).with(any_parameters)
     end
@@ -162,8 +162,8 @@ describe Puppet::Application::Master do
       expect { @master.setup }.to exit_with 1
     end
 
-    it "should tell Puppet.settings to use :main,:ssl,:master and :metrics category" do
-      Puppet.settings.expects(:use).with(:main,:master,:ssl,:metrics)
+    it "should tell Puppet.settings to use :main, :master and :metrics category" do
+      Puppet.settings.expects(:use).with(:main,:master,:metrics)
 
       @master.setup
     end
@@ -174,43 +174,10 @@ describe Puppet::Application::Master do
       @master.setup
     end
 
-    describe "with no ca" do
-
-      it "should set the ca_location to none" do
-        Puppet::SSL::Host.expects(:ca_location=).with(:none)
-
-        @master.setup
-      end
-
+    it "should init the auth server plugin" do
+      @server.expects(:init)
+      @master.setup
     end
-
-    describe "with a ca configured" do
-
-      before :each do
-        Puppet::SSL::CertificateAuthority.stubs(:ca?).returns(true)
-      end
-
-      it "should set the ca_location to local" do
-        Puppet::SSL::Host.expects(:ca_location=).with(:local)
-
-        @master.setup
-      end
-
-      it "should tell Puppet.settings to use :ca category" do
-        Puppet.settings.expects(:use).with(:ca)
-
-        @master.setup
-      end
-
-      it "should instantiate the CertificateAuthority singleton" do
-        Puppet::SSL::CertificateAuthority.expects(:instance)
-
-        @master.setup
-      end
-
-
-    end
-
   end
 
   describe "when running" do
@@ -286,8 +253,6 @@ describe Puppet::Application::Master do
         @server = stub_everything 'server'
         Puppet::Network::Server.stubs(:new).returns(@server)
         @app = stub_everything 'app'
-        Puppet::SSL::Host.stubs(:localhost)
-        Puppet::SSL::CertificateAuthority.stubs(:ca?)
         Process.stubs(:uid).returns(1000)
         Puppet.stubs(:service)
         Puppet.stubs(:[])
@@ -316,20 +281,6 @@ describe Puppet::Application::Master do
       it "should create the server with a :ca xmlrpc handler if needed" do
         Puppet.stubs(:[]).with(:ca).returns(true)
         Puppet::Network::Server.expects(:new).with { |args| args[:xmlrpc_handlers].include?(:CA) }
-
-        @master.main
-      end
-
-      it "should generate a SSL cert for localhost" do
-        Puppet::SSL::Host.expects(:localhost)
-
-        @master.main
-      end
-
-      it "should make sure to *only* hit the CA for data" do
-        Puppet::SSL::CertificateAuthority.stubs(:ca?).returns(true)
-
-        Puppet::SSL::Host.expects(:ca_location=).with(:only)
 
         @master.main
       end

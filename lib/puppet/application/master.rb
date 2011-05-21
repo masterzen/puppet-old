@@ -1,4 +1,5 @@
 require 'puppet/application'
+require 'puppet/auth'
 
 class Puppet::Application::Master < Puppet::Application
 
@@ -160,13 +161,6 @@ Copyright (c) 2011 Puppet Labs, LLC Licensed under the Apache 2.0 License
 
     xmlrpc_handlers << :CA if Puppet[:ca]
 
-    # Make sure we've got a localhost ssl cert
-    Puppet::SSL::Host.localhost
-
-    # And now configure our server to *only* hit the CA for data, because that's
-    # all it will have write access to.
-    Puppet::SSL::Host.ca_location = :only if Puppet::SSL::CertificateAuthority.ca?
-
     if Puppet.features.root?
       begin
         Puppet::Util.chuser
@@ -214,18 +208,11 @@ Copyright (c) 2011 Puppet Labs, LLC Licensed under the Apache 2.0 License
 
     exit(Puppet.settings.print_configs ? 0 : 1) if Puppet.settings.print_configs?
 
-    Puppet.settings.use :main, :master, :ssl, :metrics
+    Puppet.settings.use :main, :master, :metrics
 
     # Cache our nodes in yaml.  Currently not configurable.
     Puppet::Node.indirection.cache_class = :yaml
 
-    # Configure all of the SSL stuff.
-    if Puppet::SSL::CertificateAuthority.ca?
-      Puppet::SSL::Host.ca_location = :local
-      Puppet.settings.use :ca
-      Puppet::SSL::CertificateAuthority.instance
-    else
-      Puppet::SSL::Host.ca_location = :none
-    end
+    Puppet::Auth.server.init
   end
 end
