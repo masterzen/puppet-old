@@ -8,9 +8,12 @@ describe "Puppet::Network::HTTP::MongrelREST", :if => Puppet.features.mongrel?, 
     require 'puppet/network/http/mongrel/rest'
   end
 
-
   it "should include the Puppet::Network::HTTP::Handler module" do
     Puppet::Network::HTTP::MongrelREST.ancestors.should be_include(Puppet::Network::HTTP::Handler)
+  end
+
+  it "should include the Puppet::Auth::Handler module" do
+    Puppet::Network::HTTP::MongrelREST.ancestors.should be_include(Puppet::Auth::Handler)
   end
 
   describe "when initializing" do
@@ -193,54 +196,15 @@ describe "Puppet::Network::HTTP::MongrelREST", :if => Puppet.features.mongrel?, 
         @handler.params(@request)[:ip].should == "ipaddress"
       end
 
-      it "should use the :ssl_client_header to determine the parameter when looking for the certificate" do
-        Puppet.settings.stubs(:value).returns "eh"
-        Puppet.settings.expects(:value).with(:ssl_client_header).returns "myheader"
-        @request.stubs(:params).returns("myheader" => "/CN=host.domain.com")
+      it "should ask auth plugin if client is authenticated" do
+        @handler.expects(:authenticate)
         @handler.params(@request)
       end
 
-      it "should retrieve the hostname by matching the certificate parameter" do
-        Puppet.settings.stubs(:value).returns "eh"
-        Puppet.settings.expects(:value).with(:ssl_client_header).returns "myheader"
-        @request.stubs(:params).returns("myheader" => "/CN=host.domain.com")
-        @handler.params(@request)[:node].should == "host.domain.com"
-      end
-
-      it "should use the :ssl_client_header to determine the parameter for checking whether the host certificate is valid" do
-        Puppet.settings.stubs(:value).with(:ssl_client_header).returns "certheader"
-        Puppet.settings.expects(:value).with(:ssl_client_verify_header).returns "myheader"
-        @request.stubs(:params).returns("myheader" => "SUCCESS", "certheader" => "/CN=host.domain.com")
-        @handler.params(@request)
-      end
-
-      it "should consider the host authenticated if the validity parameter contains 'SUCCESS'" do
-        Puppet.settings.stubs(:value).with(:ssl_client_header).returns "certheader"
-        Puppet.settings.stubs(:value).with(:ssl_client_verify_header).returns "myheader"
-        @request.stubs(:params).returns("myheader" => "SUCCESS", "certheader" => "/CN=host.domain.com")
-        @handler.params(@request)[:authenticated].should be_true
-      end
-
-      it "should consider the host unauthenticated if the validity parameter does not contain 'SUCCESS'" do
-        Puppet.settings.stubs(:value).with(:ssl_client_header).returns "certheader"
-        Puppet.settings.stubs(:value).with(:ssl_client_verify_header).returns "myheader"
-        @request.stubs(:params).returns("myheader" => "whatever", "certheader" => "/CN=host.domain.com")
-        @handler.params(@request)[:authenticated].should be_false
-      end
-
-      it "should consider the host unauthenticated if no certificate information is present" do
-        Puppet.settings.stubs(:value).with(:ssl_client_header).returns "certheader"
-        Puppet.settings.stubs(:value).with(:ssl_client_verify_header).returns "myheader"
-        @request.stubs(:params).returns("myheader" => nil, "certheader" => "SUCCESS")
-        @handler.params(@request)[:authenticated].should be_false
-      end
-
-      it "should resolve the node name with an ip address look-up if no certificate is present" do
-        Puppet.settings.stubs(:value).returns "eh"
-        Puppet.settings.expects(:value).with(:ssl_client_header).returns "myheader"
-        @request.stubs(:params).returns("myheader" => nil)
-        @handler.expects(:resolve_node).returns("host.domain.com")
-        @handler.params(@request)[:node].should == "host.domain.com"
+      it "should use authentication result from auth plugin" do
+        @handler.stubs(:authenticate).returns([:authenticated, :node_name])
+        @handler.params(@request)[:authenticated].should == :authenticated
+        @handler.params(@request)[:node].should == :node_name
       end
     end
   end

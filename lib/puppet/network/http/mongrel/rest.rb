@@ -3,6 +3,7 @@ require 'puppet/network/http/handler'
 class Puppet::Network::HTTP::MongrelREST < Mongrel::HttpHandler
 
   include Puppet::Network::HTTP::Handler
+  include Puppet::Auth::Handler
 
   ACCEPT_HEADER = "HTTP_ACCEPT".freeze # yay, zed's a crazy-man
 
@@ -76,17 +77,7 @@ class Puppet::Network::HTTP::MongrelREST < Mongrel::HttpHandler
     params = request.params
     result[:ip] = params["HTTP_X_FORWARDED_FOR"] ? params["HTTP_X_FORWARDED_FOR"].split(',').last.strip : params["REMOTE_ADDR"]
 
-    # JJM #906 The following dn.match regular expression is forgiving
-    # enough to match the two Distinguished Name string contents
-    # coming from Apache, Pound or other reverse SSL proxies.
-    if dn = params[Puppet[:ssl_client_header]] and dn_matchdata = dn.match(/^.*?CN\s*=\s*(.*)/)
-      result[:node] = dn_matchdata[1].to_str
-      result[:authenticated] = (params[Puppet[:ssl_client_verify_header]] == 'SUCCESS')
-    else
-      result[:node] = resolve_node(result)
-      result[:authenticated] = false
-    end
-
+    result[:authenticated], result[:node] = authenticate(result[:ip], params)
     result
   end
 end
