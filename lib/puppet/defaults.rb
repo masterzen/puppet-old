@@ -200,6 +200,7 @@ module Puppet
     Puppet.setdefaults(
     :main,
 
+    :auth => ["ssl", "What auth plugin to use. The only valid settings is ssl."],
     # We have to downcase the fqdn, because the current ssl stuff (as oppsed to in master) doesn't have good facilities for
     # manipulating naming.
     :certname => {:default => fqdn.downcase, :desc => "The name to use when handling certificates.  Defaults
