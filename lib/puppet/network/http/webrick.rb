@@ -31,7 +31,7 @@ class Puppet::Network::HTTP::WEBrick
     arguments.merge!(Puppet::Auth.handler(:webrick).setup)
 
     @server = WEBrick::HTTPServer.new(arguments)
-    @server.listeners.each { |l| l.start_immediately = false }
+    @server.listeners.each { |l| l.respond_to?(:start_immediately) && l.start_immediately = false }
 
     setup_handlers
 
@@ -41,7 +41,7 @@ class Puppet::Network::HTTP::WEBrick
       @thread = Thread.new {
         @server.start { |sock|
           raise "Client disconnected before connection could be established" unless IO.select([sock],nil,nil,0.1)
-          sock.accept
+          sock.accept if sock.respond_to?(:accept)
           @server.run(sock)
         }
       }
