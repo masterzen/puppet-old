@@ -1,4 +1,5 @@
 require 'puppet/application'
+require 'puppet/auth'
 
 class Puppet::Application::Agent < Puppet::Application
 
@@ -399,9 +400,7 @@ Copyright (c) 2011 Puppet Labs, LLC Licensed under the Apache 2.0 License
   end
 
   def setup_host
-    @host = Puppet::SSL::Host.new
-    waitforcert = options[:waitforcert] || (Puppet[:onetime] ? 0 : 120)
-    cert = @host.wait_for_cert(waitforcert) unless options[:fingerprint]
+    Puppet::Auth.client.setup(options)
   end
 
   def setup
@@ -427,16 +426,13 @@ Copyright (c) 2011 Puppet Labs, LLC Licensed under the Apache 2.0 License
       Puppet::Util::Log.newdestination(logdest)
     end
 
-    Puppet.settings.use :main, :agent, :ssl
+    Puppet.settings.use :main, :agent
 
     # Always ignoreimport for agent. It really shouldn't even try to import,
     # but this is just a temporary band-aid.
     Puppet[:ignoreimport] = true
 
-    # We need to specify a ca location for all of the SSL-related i
-    # indirected classes to work; in fingerprint mode we just need
-    # access to the local files and we don't need a ca.
-    Puppet::SSL::Host.ca_location = options[:fingerprint] ? :none : :remote
+    Puppet::Auth.client.init(options)
 
     Puppet::Transaction::Report.indirection.terminus_class = :rest
     # we want the last report to be persisted locally

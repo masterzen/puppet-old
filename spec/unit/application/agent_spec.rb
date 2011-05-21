@@ -89,6 +89,7 @@ describe Puppet::Application::Agent do
   describe "when handling options" do
     before do
       @puppetd.command_line.stubs(:args).returns([])
+      @puppetd.stubs(:setup_host)
     end
 
     [:centrallogging, :disable, :enable, :debug, :fqdn, :test, :verbose, :digest].each do |option|
@@ -112,24 +113,6 @@ describe Puppet::Application::Agent do
     it "should set client to false with --no-client" do
       @puppetd.handle_no_client(nil)
       @puppetd.options[:client].should be_false
-    end
-
-    it "should set waitforcert to 0 with --onetime and if --waitforcert wasn't given" do
-      Puppet[:onetime] = true
-      Puppet::SSL::Host.any_instance.expects(:wait_for_cert).with(0)
-      @puppetd.setup_host
-    end
-
-    it "should use supplied waitforcert when --onetime is specified" do
-      Puppet[:onetime] = true
-      @puppetd.handle_waitforcert(60)
-      Puppet::SSL::Host.any_instance.expects(:wait_for_cert).with(60)
-      @puppetd.setup_host
-    end
-
-    it "should use a default value for waitforcert when --onetime and --waitforcert are not specified" do
-      Puppet::SSL::Host.any_instance.expects(:wait_for_cert).with(120)
-      @puppetd.setup_host
     end
 
     it "should set the log destination with --logdest" do
@@ -181,6 +164,8 @@ describe Puppet::Application::Agent do
       @host = stub_everything 'host'
       Puppet::SSL::Host.stubs(:new).returns(@host)
       Puppet.stubs(:settraps)
+      @authclient = stub_everything 'auth client'
+      Puppet::Auth.stubs(:client).returns(@authclient)
     end
 
     describe "with --test" do
@@ -276,20 +261,7 @@ describe Puppet::Application::Agent do
     end
 
     it "should use :main, :puppetd, and :ssl" do
-      Puppet.settings.expects(:use).with(:main, :agent, :ssl)
-
-      @puppetd.setup
-    end
-
-    it "should install a remote ca location" do
-      Puppet::SSL::Host.expects(:ca_location=).with(:remote)
-
-      @puppetd.setup
-    end
-
-    it "should install a none ca location in fingerprint mode" do
-      @puppetd.options.stubs(:[]).with(:fingerprint).returns(true)
-      Puppet::SSL::Host.expects(:ca_location=).with(:none)
+      Puppet.settings.expects(:use).with(:main, :agent)
 
       @puppetd.setup
     end
@@ -370,21 +342,6 @@ describe Puppet::Application::Agent do
       Puppet[:daemonize] = true
 
       @daemon.expects(:daemonize)
-
-      @puppetd.setup
-    end
-
-    it "should wait for a certificate" do
-      @puppetd.options.stubs(:[]).with(:waitforcert).returns(123)
-      @host.expects(:wait_for_cert).with(123)
-
-      @puppetd.setup
-    end
-
-    it "should not wait for a certificate in fingerprint mode" do
-      @puppetd.options.stubs(:[]).with(:fingerprint).returns(true)
-      @puppetd.options.stubs(:[]).with(:waitforcert).returns(123)
-      @host.expects(:wait_for_cert).never
 
       @puppetd.setup
     end
