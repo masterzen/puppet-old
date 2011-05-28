@@ -48,9 +48,12 @@ describe Puppet::Configurer do
       report.stubs(:save)
 
       Puppet[:lastrunfile] = tmpfile("lastrunfile")
+      Puppet.settings.setting(:lastrunfile).mode = 0666
       Puppet[:report] = true
 
       @configurer.run :catalog => @catalog, :report => report
+
+      File.stat(Puppet[:lastrunfile]).mode.to_s(8).should == "100666"
 
       summary = nil
       File.open(Puppet[:lastrunfile], "r") do |fd|
