@@ -38,24 +38,38 @@ describe Puppet::Util::Settings::FileSetting do
   end
 
   describe "when setting the owner" do
-    it "should allow the file to be owned by root" do
-      root_owner = lambda { FileSetting.new(:settings => mock("settings"), :owner => "root", :desc => "a setting") }
-      root_owner.should_not raise_error
+    describe "and using the default allowed owners" do
+      it "should allow the file to be owned by root" do
+        root_owner = lambda { FileSetting.new(:settings => mock("settings"), :owner => "root", :desc => "a setting") }
+        root_owner.should_not raise_error
+      end
+
+      it "should allow the file to be owned by the service user" do
+        service_owner = lambda { FileSetting.new(:settings => mock("settings"), :owner => "service", :desc => "a setting") }
+        service_owner.should_not raise_error
+      end
+
+      it "should allow the ownership of the file to be unspecified" do
+        no_owner = lambda { FileSetting.new(:settings => mock("settings"), :desc => "a setting") }
+        no_owner.should_not raise_error
+      end
+
+      it "should not allow other owners" do
+        invalid_owner = lambda { FileSetting.new(:settings => mock("settings"), :owner => "invalid", :desc => "a setting") }
+        invalid_owner.should raise_error(FileSetting::SettingError)
+      end
     end
 
-    it "should allow the file to be owned by the service user" do
-      service_owner = lambda { FileSetting.new(:settings => mock("settings"), :owner => "service", :desc => "a setting") }
-      service_owner.should_not raise_error
-    end
+    describe "and allowing any owners" do
+      it "should allow the ownership of the file to be unspecified" do
+        no_owner = lambda { FileSetting.new(:settings => mock("settings"),  :allow_any_owners_groups => true, :desc => "a setting") }
+        no_owner.should_not raise_error
+      end
 
-    it "should allow the ownership of the file to be unspecified" do
-      no_owner = lambda { FileSetting.new(:settings => mock("settings"), :desc => "a setting") }
-      no_owner.should_not raise_error
-    end
-
-    it "should not allow other owners" do
-      invalid_owner = lambda { FileSetting.new(:settings => mock("settings"), :owner => "invalid", :desc => "a setting") }
-      invalid_owner.should raise_error(FileSetting::SettingError)
+      it "should allow any owners" do
+        any_owner = lambda { FileSetting.new(:settings => mock("settings"), :allow_any_owners_groups => true, :owner => "any", :desc => "a setting") }
+        any_owner.should_not raise_error(FileSetting::SettingError)
+      end
     end
   end
 
@@ -86,22 +100,44 @@ describe Puppet::Util::Settings::FileSetting do
     it "should be nil when the owner is unspecified" do
       FileSetting.new(:settings => mock("settings"), :desc => "a setting").owner.should be_nil
     end
+
+    it "should be the owner when specified and allowing any owners" do
+      settings = mock("settings")
+
+      setting = FileSetting.new(:settings => settings, :owner => "owner", :allow_any_owners_groups => true, :desc => "a setting")
+      setting.expects(:use_service_user?).returns true
+      setting.owner.should == "owner"
+    end
   end
 
   describe "when setting the group" do
-    it "should allow the group to be service" do
-      service_group = lambda { FileSetting.new(:settings => mock("settings"), :group => "service", :desc => "a setting") }
-      service_group.should_not raise_error
+    describe "and using the default allowed owners" do
+      it "should allow the group to be service" do
+        service_group = lambda { FileSetting.new(:settings => mock("settings"), :group => "service", :desc => "a setting") }
+        service_group.should_not raise_error
+      end
+
+      it "should allow the group to be unspecified" do
+        no_group = lambda { FileSetting.new(:settings => mock("settings"), :desc => "a setting") }
+        no_group.should_not raise_error
+      end
+
+      it "should not allow invalid groups" do
+        invalid_group = lambda { FileSetting.new(:settings => mock("settings"), :group => "invalid", :desc => "a setting") }
+        invalid_group.should raise_error(FileSetting::SettingError)
+      end
     end
 
-    it "should allow the group to be unspecified" do
-      no_group = lambda { FileSetting.new(:settings => mock("settings"), :desc => "a setting") }
-      no_group.should_not raise_error
-    end
+    describe "and allowing any groups" do
+      it "should allow the group to be unspecified" do
+        no_group = lambda { FileSetting.new(:settings => mock("settings"),  :allow_any_owners_groups => true, :desc => "a setting") }
+        no_group.should_not raise_error
+      end
 
-    it "should not allow invalid groups" do
-      invalid_group = lambda { FileSetting.new(:settings => mock("settings"), :group => "invalid", :desc => "a setting") }
-      invalid_group.should raise_error(FileSetting::SettingError)
+      it "should allow any groups" do
+        any_group = lambda { FileSetting.new(:settings => mock("settings"), :allow_any_owners_groups => true, :group => "any", :desc => "a setting") }
+        any_group.should_not raise_error(FileSetting::SettingError)
+      end
     end
   end
 
@@ -113,6 +149,13 @@ describe Puppet::Util::Settings::FileSetting do
 
     it "should be nil when the group is unspecified" do
       FileSetting.new(:settings => mock("settings"), :desc => "a setting").group.should be_nil
+    end
+
+    it "should be the specified group when allowing any groups" do
+      settings = mock("settings")
+
+      setting = FileSetting.new(:settings => settings, :group => "group", :allow_any_owners_groups => true, :desc => "a setting")
+      setting.group.should == "group"
     end
   end
 

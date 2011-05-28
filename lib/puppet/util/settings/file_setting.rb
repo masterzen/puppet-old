@@ -7,7 +7,30 @@ class Puppet::Util::Settings::FileSetting < Puppet::Util::Settings::Setting
 
   class SettingError < StandardError; end
 
-  attr_accessor :mode, :create
+  attr_accessor :mode, :create, :allow_any_owners_groups
+
+  def initialize(args = {})
+    # treat first allow_any_owners_groups, so that setting owner and groups
+    # can't be happen before this setting.
+    @allow_any_owners_groups = args.delete(:allow_any_owners_groups)
+    super(args)
+  end
+
+  def allowed_groups
+    @allowed_groups = (allow_any_owners_groups ? nil : AllowedGroups)
+  end
+
+  def allowed_groups=(groups)
+    @allowed_groups = groups
+  end
+
+  def allowed_owners
+    @allowed_owners = (allow_any_owners_groups ? nil : AllowedOwners)
+  end
+
+  def allowed_owners=(owners)
+    @allowed_owners = owners
+  end
 
   # Should we create files, rather than just directories?
   def create_files?
@@ -15,7 +38,7 @@ class Puppet::Util::Settings::FileSetting < Puppet::Util::Settings::Setting
   end
 
   def group=(value)
-    unless AllowedGroups.include?(value)
+    if allowed_groups and not allowed_groups.include?(value)
       identifying_fields = [desc,name,default].compact.join(': ')
       raise SettingError, "Internal error: The :group setting for #{identifying_fields} must be 'service', not '#{value}'"
     end
@@ -24,11 +47,12 @@ class Puppet::Util::Settings::FileSetting < Puppet::Util::Settings::Setting
 
   def group
     return unless @group
-    @settings[:group]
+    return @settings[:group] if allowed_groups
+    @group
   end
 
   def owner=(value)
-    unless AllowedOwners.include?(value)
+    if allowed_owners and not allowed_owners.include?(value)
       identifying_fields = [desc,name,default].compact.join(': ')
       raise SettingError, "Internal error: The :owner setting for #{identifying_fields} must be either 'root' or 'service', not '#{value}'"
     end
@@ -38,7 +62,8 @@ class Puppet::Util::Settings::FileSetting < Puppet::Util::Settings::Setting
   def owner
     return unless @owner
     return "root" if @owner == "root" or ! use_service_user?
-    @settings[:user]
+    return @settings[:user] if allowed_owners
+    @owner
   end
 
   def use_service_user?
