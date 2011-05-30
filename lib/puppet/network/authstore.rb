@@ -184,7 +184,7 @@ module Puppet
         clone = dup
         clone.pattern = clone.pattern.reverse.collect do |p|
           p.gsub(/\$(\d)/) { |m| match[$1.to_i] }
-        end.join(".")
+        end.join(".") if @name == :dynamic
         clone
       end
 
