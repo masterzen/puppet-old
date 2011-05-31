@@ -43,13 +43,13 @@ describe Puppet::Network::RestAuthConfig do
   it "should read the config file when needed" do
     @authconfig.expects(:read)
 
-    @authconfig.allowed?(@request)
+    @authconfig.check_authorization(@request)
   end
 
   it "should ask for authorization to the ACL subsystem" do
     @acl.expects(:is_request_forbidden_and_why?).with(@request).returns(nil)
 
-    @authconfig.allowed?(@request)
+    @authconfig.check_authorization(@request)
   end
 
   describe "when defining an acl with mk_acl" do

@@ -28,10 +28,14 @@ module Puppet
       @main
     end
 
+    def allowed?(request)
+      raise "allowed? should not be called for REST authorization - use check_authorization instead"
+    end
+
     # check wether this request is allowed in our ACL
     # raise an Puppet::Network::AuthorizedError if the request
     # is denied.
-    def allowed?(request)
+    def check_authorization(request)
       read
 
       # we're splitting the request in part because

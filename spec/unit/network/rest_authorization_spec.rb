@@ -23,19 +23,19 @@ describe Puppet::Network::RestAuthorization do
 
   describe "when testing request authorization" do
     it "should delegate to the current rest authconfig" do
-      @authconfig.expects(:allowed?).with(@request).returns(true)
+      @authconfig.expects(:check_authorization).with(@request).returns(true)
 
       @auth.check_authorization(@request)
     end
 
     it "should raise an AuthorizationError if authconfig raises an AuthorizationError" do
-      @authconfig.expects(:allowed?).with(@request).raises(Puppet::Network::AuthorizationError.new("forbidden"))
+      @authconfig.expects(:check_authorization).with(@request).raises(Puppet::Network::AuthorizationError.new("forbidden"))
 
       lambda { @auth.check_authorization(@request) }.should raise_error(Puppet::Network::AuthorizationError)
     end
 
     it "should not raise an AuthorizationError if request is allowed" do
-      @authconfig.expects(:allowed?).with(@request).returns(true)
+      @authconfig.expects(:check_authorization).with(@request).returns(true)
 
       lambda { @auth.check_authorization(@request) }.should_not raise_error(Puppet::Network::AuthorizationError)
     end
